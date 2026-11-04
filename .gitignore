@@ -9,3 +9,10 @@ test-results/
 .expo/
 apps/mobile/ios/
 apps/mobile/android/
+.venv/
+var/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.pyc
