@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Lecture Companion",
+    "slug": "lecture-companion",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android"],
+    "plugins": [
+      ["expo-audio", {
+        "microphonePermission": "Record your lesson and save it on this phone. Audio is only uploaded when you choose to share it.",
+        "enableBackgroundRecording": true,
+        "enableBackgroundPlayback": false
+      }],
+      "expo-sqlite"
+    ],
+    "ios": { "supportsTablet": true },
+    "android": { "permissions": ["RECORD_AUDIO"] }
+  }
+}
