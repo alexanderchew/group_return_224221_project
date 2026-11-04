@@ -1,6 +1,6 @@
 # Ben — Mobile Application and Web Frontend Specification
 
-Version 0.3 · 2026-11-04 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.4 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
 
 **Owner:** Ben. **Status:** merged specification; implementation, device verification and application setup have not started. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
 
@@ -109,6 +109,8 @@ Notes/overview can be accessible while quiz generation failed. `quiz_status: ins
 ## 8. Quiz submission and practice
 
 Read only public questions from the immutable StudyPack. Keep draft selections locally against exact pack/question IDs; a new pack must not inherit answer positions. Only `quiz_status: available` is answerable; `insufficient_evidence`, `failed` and `unavailable` have explicit no-submission states. Show unanswered count and confirm incomplete submission. Submit every question exactly once with option ID or null plus `study_pack_id`; disable duplicate actions while pending.
+
+Render options in the received array order and submit their returned IDs. Alex shuffles/relabels new packs before publication; do not reshuffle on the client or infer correctness from a letter/position. Historical packs retain their original IDs/order.
 
 The backend returns correctness and percentage; do not ship/fetch private keys in advance or calculate an authoritative score locally. Render correct/incorrect/unanswered, selected/correct options, explanation and source. A network retry reuses its operation key; intentional retake creates another attempt. After solutions were viewed/submitted, show practice/revealed status rather than an unseen-test claim. F1 explicit solution reveal follows Alex’s endpoint and records its effect.
 

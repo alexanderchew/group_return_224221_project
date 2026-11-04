@@ -1,8 +1,8 @@
 # Alex — Backend, Processing, and AI Integration Specification
 
-Version 0.3 · 2026-11-04 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.6 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
 
-**Owner:** Alex, who is the user in this chat. **Status:** merged documentation baseline; no application, service, dataset, model, or passing product test is implied. The subsequent “merge and deploy” instruction authorizes committing, integrating and publishing the specs. Application implementation and paid calls are not implied; this checkout has no runnable app or deployment configuration.
+**Owner:** Alex, who is the user in this chat. **Status:** initial backend implemented under the user’s explicit local-backend instruction. Source, a pinned environment, terminal launcher and automated backend checks exist; one short real-provider test passed (section 15), followed by offline quality fixes (section 16). Trained-model quality, mobile clients and full endurance remain separate evidence. Section 14 records the current executable subset and limitations. Earlier spec/publication history does not establish a complete product gate.
 
 Companion specifications: [Ben — mobile and web frontend](BEN_FRONTEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md). These are the only three active specifications. This file owns shared requirements/defaults, the **canonical API**, model integration, shared delivery gates, open decisions and evidence status. Ben owns functional client behavior; Michelle owns information/interaction design and its handoff. Do not maintain a second API or roadmap elsewhere.
 
@@ -110,7 +110,7 @@ Exact package/model versions, bounded provider prices, disk reserve, device/OS/b
 
 ## 4. Canonical API — conventions and access
 
-This and section 5 are the **only** public API/data definition. Ben and Michelle link here instead of maintaining another schema. Alex later generates OpenAPI/typed fixtures from one backend implementation. API prefix `/api/v1`; study-pack schema `1.0` is a proposed initial schema, not an existing implementation.
+This and section 5 are the **only** public API/data definition. Ben and Michelle link here instead of maintaining another schema. Alex generates OpenAPI from the backend implementation using `scripts/export_contract.py`; the generated contract is under `fixtures/contracts/`. API prefix `/api/v1`; study-pack schema `1.0` is implemented for the initial backend subset recorded in section 14.
 
 - JSON uses `snake_case`, opaque string IDs, UTC ISO-8601 event timestamps and **seconds** for all media durations/offsets (`duration_seconds`, `start_seconds`, `end_seconds`). Seconds are finite nonnegative numbers, fractional when necessary. Internal sample counts/milliseconds are converted at the adapter boundary; no public `*_ms` or `/sessions` alternative.
 - Unavailable ASR timing is `null` for both start/end. Do not invent word-level confidence/speaker identities. Valid timed spans have start ≤ end in original-audio coordinates.
@@ -236,6 +236,10 @@ For long inputs, count bounded context/output, map sections into source-linked e
 
 Validate shape, option/key membership, unique options/question IDs and source-reference existence before publication; review actual support/factual correctness on representative subjects/languages. Schema validity is not educational correctness. Target five MCQs; accept fewer supported items, not hallucinated padding. Free-text marking needs a separate adopted rubric/evaluation.
 
+At initial pack publication, randomly permute the four possible correct-answer positions without repetition for the first four questions; a fifth may reuse one position. Shuffle distractors and relabel options `a`–`d` in display order while mapping the correct content to its new private key. Freeze that layout/key with the pack. The options array defines display order; IDs in historical packs remain valid as originally published. Options/explanations must describe content without relying on letters or positions. This local rule uses no provider call.
+
+Keep source IDs in structured `evidence_segment_ids`, rather than overview title/description/topic prose. The prompt states this explicitly; local publication also strips inline ID citations without discarding structured references or ordinary formulas/brackets. Citation-only text fails validation instead of becoming an empty overview. Raw generation checkpoints retain the provider's original output. Prompt changes use one version constant in provider provenance and generation cache keys; local output processing has its own provenance version.
+
 Save provider original text; text corrections create immutable TranscriptRevision, never overwrite it. New generation produces a new StudyPack bound to that revision. Old packs become visibly outdated; old attempts retain original wording/key/source. Jobs finish against their captured revision and cannot silently attach old results to new text. Manual subject overrides remain separate; no automatic retraining from corrections.
 
 ## 8. Budget, terminal credentials, storage, and deletion
@@ -252,7 +256,7 @@ The ledger survives restarts, credential changes, month boundaries and deletion/
 
 ### Terminal launcher contract
 
-Future entry point `scripts/start_demo.py` is a specification, not a file created in this task. On future authorized setup it loads non-secret host/storage/pinned versions and existing budget state, then prompts Alex with no echo (for example `getpass`) for `ELEVENLABS_API_KEY` and `OPENAI_API_KEY` if OpenAI is selected. Existing deliberately supplied backend environment may be supported without printing values.
+The implemented entry point is `scripts/start_demo.py`, also available through `scripts/start_demo.command`. On future authorized setup it loads non-secret host/storage/pinned versions and existing budget state, then prompts Alex with no echo (for example `getpass`) for `ELEVENLABS_API_KEY` and `OPENAI_API_KEY` if OpenAI is selected. Existing deliberately supplied backend environment may be supported without printing values.
 
 Do not put keys in command arguments, chat/browser/mobile input, source, logs, client bundles, crash dumps or default plaintext `.env` files. Inject them only into API/worker process environments, launch children without shell interpolation/tracing, and avoid billable key checks at startup. Missing keys disable their paid stages with clear status; EOF/interrupt exits cleanly. Show only configured booleans and safe LAN/localhost/budget status. Provision app connection access separately from provider keys. Stop services cleanly, retain media/jobs/ledger and remove transient references where practical without promising memory erasure. Restart does not reset spend or update dependencies.
 
@@ -300,7 +304,7 @@ An external baseline is not team-trained output; unknown/missing mode is not a p
 
 ## 11. Shared delivery gates and acceptance
 
-D0 is a short real end-to-end demonstration completed across web and both native clients by G1 + G2, not full capacity. G1 alone proves the web baseline, not both phones. F1 is the complete adopted target including both native platforms, normal sessions, genuine model evidence, browser recording, recovery/revisions and maximum duration. Features are sequenced, not silently removed. All implementation gates below are **not started**.
+D0 is a short real end-to-end demonstration completed across web and both native clients by G1 + G2, not full capacity. G1 alone proves the web baseline, not both phones. F1 is the complete adopted target including both native platforms, normal sessions, genuine model evidence, browser recording, recovery/revisions and maximum duration. Features are sequenced, not silently removed. Backend work has started and automated/local-runtime evidence is recorded in section 14. No complete G0–G6 cross-client/provider/model gate is claimed passed; missing device, account, dataset and teacher-rule evidence remains explicit.
 
 | Gate | Dependencies | Outcome and acceptance evidence |
 | --- | --- | --- |
@@ -326,7 +330,7 @@ Michelle starts flow/wireframe/token work early and reviews functional screens a
 - [ ] Both phones pass normal and maximum recording evidence; browser limitations, working disk/memory and measured recovery loss are explicit.
 - [ ] All planned gate evidence and implemented Michelle/Ben handoffs are reviewed before F1/demo-ready claims.
 
-Documentation merge status: source snapshots preserved, three owner specs consolidated, canonical contract selected, and subsequent user authorization recorded for Git commit/main integration/publication. Documentation consistency verification is recorded in section 13. No application build, provider request, dataset/training/inference or device/endurance test has been run; no source bootstrap, dependency installation, credential collection or application deployment is established by publishing specs. Record future exact commands/results, device/OS/build, hashes, counts, measured costs/timing, failures and limitations beside the affected gate before checking a box.
+Documentation merge status: source snapshots preserved, three owner specs consolidated, canonical contract selected, and subsequent user authorization recorded for Git commit/main integration/publication. Documentation consistency verification is recorded in section 13. The earlier publication itself established no application behavior. The subsequent backend instruction authorizes the source/bootstrap/local dependency/runtime work recorded in section 14; it does not establish real provider success, model training or device/endurance verification. Record future exact commands/results, device/OS/build, hashes, counts, measured costs/timing, failures and limitations beside the affected gate before checking a box.
 
 ## 12. Remaining decisions and risks
 
@@ -349,7 +353,7 @@ Resolved for this merged baseline: three-owner layout/canonical contract, shared
 | Q13 | Resolved baseline: post-save batch, offline capture and tested cached reading; no realtime transcript promise | Alex/Ben |
 | Q14 | Confirm teammate availability and remaining members’ QA/presentation/data contributions; owner roles already recorded | Team at G0 |
 | Q15 | Final name/branding/license/submission and export needs; working descriptor is not a brand commitment | Team before presentation packaging |
-| Q16 | Explicit implementation instruction/source layout/tooling permission remains required; this is a specification merge | Alex before bootstrap |
+| Q16 | Resolved for Alex’s backend: explicit implementation/local runtime instruction received; source is under `services/api/lecture_backend/`, launcher under `scripts/`, local state under ignored `var/demo/`. Mobile/frontend/training/publication are separate scope. | Alex / current backend implementation |
 
 Highest risks: missing teacher rules; leakage/tiny data; unsupported generated facts; background/process-loss behavior; laptop sleep/disk/network; uncertain provider billing; mismatched client/API units; and scope expansion before D0 works. Responses are the evidence gates above, not new infrastructure by default. No learning improvement, legal certification, provider SLA, capacity or device success is claimed.
 
@@ -367,3 +371,65 @@ Official primary references retained from source research support candidate cons
 - [Expo Audio](https://docs.expo.dev/versions/latest/sdk/audio/) and [Expo CLI](https://docs.expo.dev/more/expo-cli/): recording/configuration and compatible dependency sets require actual installed-device verification.
 - [MDN MediaRecorder timing](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/dataavailable_event): event delivery is not an exact audio clock.
 - [ElevenLabs API pricing](https://elevenlabs.io/pricing/api?price.section=speech_to_text): account/model/feature rates must configure bounded estimates; no static promised number of recordings.
+
+## 14. Backend implementation and local operation
+
+The user explicitly requested implementing Alex’s backend and running it locally on 2026-11-04. The executable initial implementation uses Python 3.13.7, FastAPI 0.162.0, Uvicorn 0.54.0, OpenAI SDK 3.45.0, HTTPX 0.28.1, Pydantic 2.14.2 and FFmpeg/ffprobe 8.1. Direct dependencies and the full resolved graph are pinned in `pyproject.toml`/`uv.lock`; no global package install was required. Existing laptop Python 3.14 is not repurposed.
+
+### Implemented subset
+
+- All 23 canonical API operations are registered, with generated OpenAPI, bearer demo access, browser HttpOnly cookie setup/CSRF, safe errors and request IDs. The operator connect/health/docs routes support local setup; they never accept provider keys.
+- SQLite WAL metadata/jobs, atomic idempotent mutation outcomes, immutable provider/corrected transcripts, packs and attempts; shared-library access, optimistic edits, original byte-range playback and content-removal tombstones. Safe idempotency tombstones retain no deleted lesson text and prevent a retried upload operation from recreating deleted content.
+- Stream-bounded one-shot intake and checksummed resumable transport parts, verified media probing/normalization, multi-file reconstruction with original source files retained. Incomplete uploads expire after 24 hours; startup removes expired transport files. Explicit interruption-gap mapping is not yet supported and is rejected rather than silently shifting time.
+- One persistent worker with a filesystem lease, chunk/stage checkpoints, explicit safe retry/cancel and partial transcripts/results; deleted/canceled work cannot publish late output. Lost in-flight request outcomes remain conservatively reserved on restart.
+- Real ElevenLabs batch HTTP and OpenAI Responses structured-generation adapters, with hidden credentials, no SDK automatic retries, source-reference/key validation and bounded cost before each request. Production has no synthetic/provider-success fallback. Tests inject labeled doubles without network charges.
+- A shared US$20 ledger using exact monetary units, a US$16 warning/US$2 contingency, atomic reservations, persistent uncertain charges and explicitly estimated accounting. Successful calls conservatively consume their reserved bound until reconciled against actual billing; the API does not claim invoice-accurate costs or allow resets.
+- A compatible optional TensorFlow/Keras serving adapter (`LECTURE_MODEL_DIR`, containing trusted `model.keras` and `manifest.json` with `input_schema: unicode_text_v1`, labels, version and threshold). TensorFlow/the trained artifact are not installed/supplied; missing inference remains unavailable. No model training or accuracy claim is fabricated.
+
+### Run and connect
+
+From this worktree, run `./scripts/start_demo.command` (or `.venv/bin/python scripts/start_demo.py`). It privately prompts for ElevenLabs/OpenAI keys; Enter disables a provider. `--no-prompt` starts immediately with only explicitly inherited provider environment. Startup makes no billable validation request. No provider secret is written to disk. The private `var/demo/operator-access` is a **demo app-access** credential, not a provider key; the launcher displays it in the local terminal, never in normal API responses.
+
+Default endpoints: `http://127.0.0.1:8000/health`, `/docs`, `/operator/connect` and `/openapi.json`. Use the displayed demo code in Swagger Authorize for bearer requests. Browser provisioning sets HttpOnly app-access and readable CSRF cookies; mutations require matching `X-CSRF-Token`. Stop with Ctrl+C before restarting to enter keys. The launcher prevents a second instance using the same data directory and preserves the ledger. Phone reachability/TLS still needs actual device setup; explicitly pass the trusted laptop LAN IP with `--host` rather than treating phone localhost as the laptop.
+
+To reproduce: `uv sync --frozen`; to verify: `.venv/bin/pytest -q` and `.venv/bin/ruff check services scripts tests`; to regenerate `fixtures/contracts/openapi.json`: `.venv/bin/python scripts/export_contract.py`. Data, audio, database, app-access provisioning and `.venv` are ignored/private. Source archives were not modified.
+
+### Verified envelope and limits
+
+Current accepted backend intake is 60 minutes/128 MiB, with ten-hour/2-GB targets still advertised separately and `capacity_status: prototype_limited`. Synthetic 30-minute/60-minute WAVs verify intake/decoded duration, not native capture, real transcription, battery or endurance. WAV, MP3, M4A/AAC and WebM/Opus decoding/normalization are exercised. The worker uses disjoint source chunks without optional context overlap; no denoising/silence trimming is enabled. Long input is processed in bounded transcript groups with evidence retained; incomplete generation yields a new labeled partial pack.
+
+GPT-6 Luna is the configured low-cost generation model, using bounded standard-tier requests and low reasoning. The single real-provider sample in section 15 verifies account access and that sample's output; general educational quality remains unvalidated. Conservative configured bounds are US$1/M input tokens, US$5/M output tokens and US$0.50/audio hour, above the public standard prices checked during setup; unknown model configurations fail closed. These are budget admission bounds, not a promised invoice price. Provider model IDs, usages, prompt version and estimated accounting remain explicit.
+
+**Implementation verification passed:** `.venv/bin/pytest -q` reports **55 passed** (34 backend cases, three offline live-run budget-guard cases and 18 content/replay regression cases); Ruff and Python syntax checks pass. Tests cover access/CSRF/shared library, genuine WAV/MP3/M4A/WebM decoding, synthetic 30/60-minute WAV intake, streamed-body limits, checksummed resume/multi-file original retention/expiry, idempotency, scoring/revealed practice, transcript/override conflicts, frozen attempts, retry checkpoints/partial results, cancellation/deletion races, concurrent budget reservations, restart uncertainty and provider request contracts with explicit test doubles. The generated OpenAPI has all 23 canonical operations and the same error envelope as the runtime; three development-only response fixtures are labeled under `fixtures/contracts/`. Section 16 records the saved-output regression fixture and external-HTTP test block.
+
+A native Terminal window runs the launcher at **http://127.0.0.1:8000**. Before the paid test, live HTTP checks passed: health/config 200, unauthorized access 401, synthetic upload 201, audio range 206, worker blocked safely for missing credentials and cleanup 204. After a controlled restart the live OpenAPI matched `fixtures/contracts/openapi.json`, the shared library was clean, and settled/reserved/uncertain spending remained zero. A second launcher was rejected without replacing the live PID or resetting data. All 37 archived source hashes still match. The terminal displays only demo access provisioning/provider-configured booleans, not provider key values. Alex subsequently supplied both provider keys privately; section 15 records the paid test and retained spending.
+
+The user subsequently entered both keys privately and explicitly authorized one short real end-to-end test within US$2. Section 15 records its successful actual provider processing. Backend live processing is therefore verified on that sample; Ben’s web/native clients, trained-model evidence and G2/G5 endurance are not established. The later merge/deploy instruction authorizes Git publication and local service replacement as described in section 17; no public hosting is implied.
+
+## 15. First authorized real-provider end-to-end test
+
+The user explicitly requested testing transcription, notes, quiz generation and scoring with a short sample within US$2. `scripts/run_live_e2e.py --allow-paid --max-usd 2.00` used the existing running server; keys stayed private in that server and were not read, logged or re-entered by the runner. macOS local speech synthesis produced a 60.024813-second known photosynthesis narration; this is synthetic clear speech, not a real classroom/microphone endurance test.
+
+Before paid requests, the runner verified no other active jobs and installed a temporary ledger ceiling allowing at most US$2 in new reservations, retaining the usual contingency. Its cumulative baseline persists across retries; charges are never cleared. Offline guard tests verify cumulative limits, failure recovery and retention of the guard while a job remains in flight. After the terminal job completed, the regular US$20 ceiling was restored. Both requests settled conservatively: ElevenLabs US$0.016667 bound, OpenAI US$0.054627 bound, total **US$0.071294**. No unresolved/reserved amounts remain. These are conservative admission/accounting bounds, not invoice-accurate vendor charges.
+
+Actual provider results: ElevenLabs `scribe_v2` transcription and OpenAI `gpt-6-luna` generation completed in 22.85 seconds from test submission to scoring. The transcript had two substitutions in the known 161-word script (WER 1.24%). Three note sections/six points, overview/topics and four MCQs referenced valid original transcript segments. Content review found the notes and all four keys faithful to the narration. A revealed-practice submission scored 4/4 (100%); a second with two correct, one wrong and one unanswered scored 2/4 (50%). Repeating that submission returned the same attempt. The public pack omitted answer keys before explicit reveal.
+
+Local evidence is retained under ignored `var/e2e/live-short-sample/`: reference script/audio, transcript, public study pack, quiz keys/attempts, safe per-request usage/reservations, `run.json` and readable `results.txt`. The demo library retains the clearly labeled synthetic recording `rec_300c459bcae945ae9b2ecc9bff9fa846` and pack `pack_8725a5d4a06b4a659b72b50746444eea` for review. No provider credential is in these artifacts. The runner is opt-in, local-server-only, and rejects an already-passed run by default; this does not authorize future automatic paid runs.
+
+The original run exposed two quality findings: all four correct options landed in position A, and the overview included raw reference IDs inline. Section 16 records their subsequent correction for new packs without changing this historical test. Biology came from the explicitly labeled external baseline, with custom-model unavailable. This verifies the backend’s real provider/scoring path on one sample, not educational effectiveness, a trained TensorFlow model, full G1 web UI, mobile clients or maximum duration.
+
+## 16. Offline quiz and overview quality fixes
+
+Alex expressly requested both fixes and test reruns without any more paid calls. `study_content.py` now assembles a shuffled/balanced quiz and cleans overview prose at publication, retaining structured citations and immutable provider checkpoints. The prompt is `lecture-evidence-v2`; worker cache keys use that same constant. Provenance adds `output_processing_version: quiz-overview-v1`. The public API schema is unchanged. No historical option/key/attempt is migrated in place.
+
+`fixtures/regressions/photosynthesis-generated-v1.json` preserves the known synthetic sample's original generated content/keys and transcript segments, explicitly labeled `SAVED_REAL_PROVIDER_OUTPUT_OFFLINE_REPLAY`. Regression tests cover zero through five questions, correct text/key/explanation/reference association, balanced positions, citation-only failure, bracketed/bare/Markdown references, formula preservation, multi-part overview merging and input immutability. An in-process worker/API replay reuses the saved transcript/output, checks answer secrecy, 100% and 50% scoring, idempotency, raw checkpoint retention and unchanged previous packs/attempts after a new pack. It performs no transcription/generation request; external HTTP transports are blocked throughout pytest.
+
+Verification: all 55 tests pass, with Ruff and syntax checks passing. The live ledger is unchanged at **US$0.071294 settled**, zero reserved/uncertain, regular US$20 ceiling. Local readable replay evidence is under `var/e2e/offline-quality-fixes/`. This is offline regression evidence, not another real-provider run. The original keyed server is preserved; an existing process must be stopped/restarted through the launcher to load these source changes, with provider keys privately re-entered if required. Keys are not extracted from that process and no new paid work is started.
+
+## 17. Backend merge and local release
+
+The subsequent explicit “merge and deploy” instruction authorizes committing the backend, fixtures, offline test runner/regressions and updated owner documentation, integrating them into local main, publishing to the existing GitHub origin, and replacing the laptop's running API with this source. It does not authorize public/cloud hosting or another paid provider request. The three owner specs and immutable source archives remain intact.
+
+Release verification uses all 55 offline tests and Ruff, staged whitespace/content checks, archive hashes, pinned dependency manifests, repository permissions and current remote/main ancestry. Exclude `.venv`, local audio/database/budget/access provisioning, `.env`, caches and unrelated `.DS_Store`. Preserve local data and the persistent US$0.071294 ledger; back up the database before restart and verify its records/accounting afterward. Confirm the remote commit matches local main after the normal push.
+
+Deploy by first ensuring no active job, then gracefully stopping the old launcher and starting `scripts/start_demo.command` from the merged source with the same local data directory. Because provider keys exist only in the old process, Alex supplies them privately in the new Terminal prompt; no process-memory extraction or plaintext key backup is used. Startup and health/config/budget/library checks make no paid request. Verify localhost access and the published OpenAPI after startup. Any incomplete key-entry step must be reported as pending, not claimed as a ready keyed service.
