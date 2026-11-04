@@ -2,7 +2,7 @@
 
 ## Active project and document authority
 
-The active project is the lecture study app, replacing RiftTable AR by explicit user instruction. The user is Alex. Read README.md and the three active owner specs under docs/specs/ before changing work:
+The active project is the lecture study app, replacing RiftTable AR by explicit user instruction. Owner roles are Alex (backend), Ben (frontend) and Michelle (design); honor the current user’s stated identity rather than assuming every chat is Alex. Read README.md and the three active owner specs under docs/specs/ before changing work:
 
 - ALEX_BACKEND_SPEC.md owns shared requirements/defaults, the single API/data contract, model/training/inference, local operations/budget/keys, delivery gates, open decisions and evidence status.
 - BEN_FRONTEND_SPEC.md owns functional iPhone/iOS, Android and web behavior and integration against Alex’s contract.
@@ -15,6 +15,12 @@ Archived documents under docs/planning/archive/ are historical sources only, inc
 ## Current authorization
 
 The initial request authorized documentation consolidation: README.md, AGENTS.md, the three owner Markdown specs under docs/specs/, and archival preservation of superseded Markdown. The subsequent direct instruction “merge and deploy” additionally authorizes committing this documentation, merging it into local main while preserving unrelated work, and publishing it to the configured GitHub remote. No application source or deployment target exists in this checkout, so documentation publication is not application deployment. Do not infer authorization to implement the entire application, install dependencies, train a model, collect provider keys or spend API budget from this publishing request. A subsequent implementation instruction can authorize that work. Never mark an implementation gate passed because a spec or Git commit exists.
+
+On 4 November 2026, Ben identified himself and requested starting implementation. This authorizes the frontend source/dependency bootstrap under `apps/web/` and its local verification. Alex’s API is not ready, per Ben. The first frontend checkpoint and unresolved integration assumptions are in Ben’s spec section 11. No backend implementation, paid provider work, model training, public deployment or publication of the frontend is implied. Earlier documentation-only checkout descriptions above describe the prior state.
+
+Ben subsequently prioritized the audio recording interface and requested a modern, compact, user-friendly design. This authorizes recording-first work in `apps/web/` and the native Expo frontend in `apps/mobile/`, with local dependencies and validation. The current evidence is in Ben’s spec section 12. Native source/bundle export is not installation, physical-device verification, measured recovery/endurance or release approval.
+
+Ben then explicitly requested creating a pull request and merging this frontend. Commit/branch publication, PR creation and normal merging are authorized. Preserve branch protection and required checks; this does not authorize application deployment or passing unverified device gates.
 
 ## Engineering and reporting rules
 
