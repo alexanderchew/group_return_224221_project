@@ -1,0 +1,111 @@
+{
+  "fixture_mode": "DEVELOPMENT_ONLY_PROVIDER_DOUBLES",
+  "response": {
+    "schema_version": "1.0",
+    "id": "pack_fd524205274d4b2d836c6ce4b3f8c1ea",
+    "recording_id": "rec_77698810241342d888ea6081854e251c",
+    "transcript_revision_id": "transcript_88a407fbd07348e1a6f8678d4cb72617",
+    "created_at": "2026-11-04T15:24:13.003809+00:00",
+    "output_language": "en",
+    "transcript_segments": [
+      {
+        "end_seconds": null,
+        "id": "seg_277cae3ba9db4ba297a1f36ec51c06e3",
+        "speaker_label": null,
+        "start_seconds": null,
+        "text": "Photosynthesis uses light energy. Chlorophyll in green plants absorbs light to make glucose."
+      }
+    ],
+    "transcript_next_cursor": null,
+    "classification": {
+      "custom_prediction": null,
+      "custom_status": "unavailable",
+      "fallback_reason": "custom_model_not_connected",
+      "label": "Biology",
+      "model_version": null,
+      "score": null,
+      "source": "openai_baseline"
+    },
+    "subject_override": null,
+    "metadata": {
+      "description": "Plants use light.",
+      "evidence_segment_ids": [
+        "seg_277cae3ba9db4ba297a1f36ec51c06e3"
+      ],
+      "title": "Photosynthesis",
+      "topics": [
+        {
+          "evidence_segment_ids": [
+            "seg_277cae3ba9db4ba297a1f36ec51c06e3"
+          ],
+          "text": "Photosynthesis"
+        }
+      ]
+    },
+    "notes": [
+      {
+        "heading": "Light",
+        "points": [
+          {
+            "text": "Chlorophyll absorbs light.",
+            "evidence_segment_ids": [
+              "seg_277cae3ba9db4ba297a1f36ec51c06e3"
+            ]
+          }
+        ]
+      }
+    ],
+    "quiz_status": "available",
+    "questions": [
+      {
+        "evidence_segment_ids": [
+          "seg_277cae3ba9db4ba297a1f36ec51c06e3"
+        ],
+        "id": "q_7c3c52ecaeb6429d988dcfd57539d498",
+        "options": [
+          {
+            "id": "a",
+            "text": "Chlorophyll"
+          },
+          {
+            "id": "b",
+            "text": "Iron"
+          },
+          {
+            "id": "c",
+            "text": "Salt"
+          },
+          {
+            "id": "d",
+            "text": "Glass"
+          }
+        ],
+        "prompt": "What absorbs light in green plants?"
+      }
+    ],
+    "artifact_statuses": {
+      "metadata": "ready",
+      "notes": "ready",
+      "quiz": "ready"
+    },
+    "coverage": {
+      "covered_intervals": [
+        [
+          0,
+          0.25
+        ]
+      ],
+      "gaps": [],
+      "source_duration_seconds": 0.25
+    },
+    "freshness": "current",
+    "warnings": [],
+    "provenance": [
+      {
+        "model": "test-fixture",
+        "prompt_version": "test",
+        "provider": "TEST_DOUBLE"
+      }
+    ]
+  }
+}

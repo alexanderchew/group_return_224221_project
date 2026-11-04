@@ -1,0 +1,42 @@
+{
+  "fixture_mode": "DEVELOPMENT_ONLY_PROVIDER_DOUBLES",
+  "response": {
+    "id": "job_eb7fe48baacb4d90bb4d392977c753b8",
+    "recording_id": "rec_77698810241342d888ea6081854e251c",
+    "transcript_revision_id": "transcript_88a407fbd07348e1a6f8678d4cb72617",
+    "retry_of_job_id": null,
+    "status": "ready",
+    "stage": "validate_outputs",
+    "updated_at": "2026-11-04T15:24:13.004150+00:00",
+    "created_at": "2026-11-04T15:24:12.967173+00:00",
+    "study_pack_id": "pack_fd524205274d4b2d836c6ce4b3f8c1ea",
+    "error": null,
+    "stage_attempts": [
+      {
+        "stage": "prepare_audio",
+        "started_at": "2026-11-04T15:24:12.970789+00:00",
+        "status": "preparing_audio"
+      },
+      {
+        "stage": "transcribe",
+        "started_at": "2026-11-04T15:24:12.995580+00:00",
+        "status": "transcribing"
+      },
+      {
+        "stage": "classify_subject",
+        "started_at": "2026-11-04T15:24:12.999027+00:00",
+        "status": "analysing"
+      },
+      {
+        "stage": "generate_notes",
+        "started_at": "2026-11-04T15:24:13.000918+00:00",
+        "status": "generating"
+      },
+      {
+        "stage": "validate_outputs",
+        "started_at": "2026-11-04T15:24:13.003262+00:00",
+        "status": "validating"
+      }
+    ]
+  }
+}
