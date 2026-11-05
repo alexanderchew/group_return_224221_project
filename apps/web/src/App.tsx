@@ -73,7 +73,7 @@ function Workspace({ base, initialFile, clearInitialFile }: { base: string; init
   return <main id="main" className="workspace">
     <div className="page-heading"><div><span className="eyebrow">LISTEN. REVISIT. UNDERSTAND.</span><h1>Your lecture library</h1><p className="muted">One shared space for the lessons you’re learning.</p></div><button className="secondary" disabled={loading} onClick={() => void refresh()}>{loading ? 'Connecting…' : 'Refresh library'}</button></div>
     {error && <ErrorNotice error={error} />}
-    {budget && <div className="budget">Demo allowance: ${budget.available} available of ${budget.total}<span>Settled ${budget.settled} · Reserved ${budget.reserved} · Uncertain ${budget.uncertain}</span></div>}
+    {budget && <div className="budget">Demo allowance: ${budget.available_usd} available of ${budget.ceiling_usd}<span>Settled ${budget.settled_usd} · Reserved ${budget.reserved_usd} · Uncertain ${budget.uncertain_usd}</span></div>}
     {!config && !loading && <div className="notice">Connect to the laptop to check supported formats and upload limits. Processing is unavailable while disconnected.</div>}
     <div className="columns"><aside className="library" aria-label="Shared lecture library"><div className="section-heading"><h2>Lectures</h2><span className="badge">Shared</span></div>
       {!loading && config && recordings.length === 0 && <p className="muted">No uploaded lectures yet.<br />Add your first lesson to get started.</p>}

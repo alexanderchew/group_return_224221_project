@@ -1,6 +1,6 @@
 # Ben — Mobile Application and Web Frontend Specification
 
-Version 0.4 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.5 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
 
 **Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented locally; API integration, native installation and physical-device verification remain pending. Sections 11–12 separate the checkpoints and evidence. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
 
@@ -205,3 +205,16 @@ Expo `58.0.23`, React Native `0.88.1`, Audio `58.0.11`, FileSystem `58.0.13`, SQ
 Type checks pass for both apps; the web production build passes; Metro/Hermes exports for both iOS and Android pass. The 11 existing unit tests and 13 browser tests pass. The five new recorder browser tests use Chrome’s synthetic media device to exercise real recording APIs: actual playable saved audio; excluded pause time; local persistence across reload; no API requirement; denial/retry/import; service lifetime across views; hidden-page pause and stopping while paused; incomplete-session recovery; and a 390px phone viewport with controls in view and no horizontal overflow. Test images label synthetic microphone input. The existing eight study/browser tests still pass after navigation changes.
 
 No native binary was built, signed, installed or distributed. No actual iPhone/Android microphone, Safari, 30/60-minute recording, ten-hour endurance, measured recovery loss, provider processing, API integration or Michelle usability approval is established. These remain open G0/G2/G4/G5 evidence requirements. The local browser interface is reviewable now; native readiness must be assessed on actual test phones.
+
+## 13. Backend compatibility fixes — 5 November 2026
+
+Ben reported four integration defects in PR #3 and requested fixes in a new pull request. Alex’s backend is now present from upstream main. The provisional wire assumptions in section 11 are historical; the following behavior is aligned with the implementation in `services/api/lecture_backend/app.py` and `core.py`, alongside the generated OpenAPI in `fixtures/contracts/openapi.json`:
+
+- Browser mutations read the operator-issued `lecture_csrf` cookie and send `X-CSRF-Token`, retaining `credentials: include`, operation keys and automatic multipart boundaries. GET/HEAD/OPTIONS do not attach the mutation token. The HttpOnly demo-access cookie remains separate.
+- File validation compares normalized MIME media types, so the recorder’s `audio/webm;codecs=opus` matches the server’s `audio/webm`. Codec parameters and case do not trigger a false rejection; unsupported containers and independent size/duration limits still apply. The server remains responsible for decoding actual bytes.
+- Quiz responses validate and render `results[].is_correct`, including incorrect/unanswered feedback and restored prior attempts. Scores still come exclusively from the backend.
+- Budget responses use `currency: USD`, `ceiling_usd`, `settled_usd`, `reserved_usd`, `uncertain_usd`, `contingency_usd` and `available_usd`. The allowance display reads those returned amounts instead of expecting the earlier provisional names or calculating a replacement balance.
+
+Verification: 25 unit tests pass; the production build and web type check pass. All 17 Chrome browser cases have passed, including the existing recorder/recovery suite, mutation header checks, correct/incorrect/unanswered quiz feedback, feedback restoration, the returned allowance breakdown, and a freshly captured WebM passed through Use for study and multipart upload. One new test initially used an inconsistent simulated recording lookup; after correcting that test fixture, its focused rerun passed. Browser tests use a synthetic microphone and explicitly simulated API responses matching the reviewed backend fields; they are not a live backend/provider integration result. No backend source, dependencies, provider calls, stored data or accounting were changed.
+
+Native/device/endurance, browser provisioning across actual deployment origins, generated client types and a complete live web-to-laptop walkthrough remain pending. These fixes do not pass the full G1/G2 gates. The new PR supersedes the still-unmerged PR #3 and retains the original recording-first frontend work.
