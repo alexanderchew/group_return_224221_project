@@ -5,7 +5,7 @@ import { pack, question } from '../tests/fixtures';
 
 const store = new Map<string, string>();
 vi.stubGlobal('localStorage', { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => store.set(key, value), removeItem: (key: string) => store.delete(key) });
-vi.stubGlobal('document', { cookie: 'csrftoken=test-csrf' });
+vi.stubGlobal('document', { cookie: 'unrelated=ignored;lecture_csrf=test-csrf' });
 afterEach(() => { store.clear(); vi.restoreAllMocks(); });
 
 describe('safe API boundary', () => {
@@ -17,7 +17,7 @@ describe('safe API boundary', () => {
     expect(url).toBe('https://laptop.test/api/v1/config');
     expect(init?.credentials).toBe('include');
     expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('original-key');
-    expect(new Headers(init?.headers).get('X-CSRFToken')).toBe('test-csrf');
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('test-csrf');
     expect(new Headers(init?.headers).has('Authorization')).toBe(false);
   });
   it('rejects an incompatible response instead of showing invented content', async () => {
@@ -71,5 +71,12 @@ describe('media presentation', () => {
     expect(packSchema.safeParse({ ...pack, quiz_status: 'available', questions: [] }).success).toBe(false);
     expect(packSchema.safeParse({ ...pack, questions: [question, question] }).success).toBe(false);
     expect(packSchema.safeParse({ ...pack, classification: { ...pack.classification, score: 0.9 } }).success).toBe(false);
+  });
+  it('accepts recorder MIME parameters without allowing unsupported containers', () => {
+    const config = configSchema.parse({ max_audio_bytes: 100, max_duration_seconds: 60, target_max_audio_bytes: 2000000000, target_max_duration_seconds: 36000, capacity_status: 'prototype_limited', accepted_mime_types: ['audio/webm', 'audio/mp4'], workspace_mode: 'shared_demo' });
+    for (const type of ['audio/webm;codecs=opus', 'audio/mp4; codecs=mp4a.40.2']) {
+      expect(validateFile(new File(['audio'], 'lesson', { type }), config, 10)).toBeNull();
+    }
+    expect(validateFile(new File(['audio'], 'lesson', { type: 'audio/ogg;codecs=opus' }), config, 10)).toContain('format');
   });
 });

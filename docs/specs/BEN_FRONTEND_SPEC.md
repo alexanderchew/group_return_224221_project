@@ -1,8 +1,8 @@
 # Ben — Mobile Application and Web Frontend Specification
 
-Version 0.4 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.5 · 2026-11-06 · Project name undecided; “Lecture Companion” is a working descriptor.
 
-**Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented locally; API integration, native installation and physical-device verification remain pending. Sections 11–12 separate the checkpoints and evidence. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
+**Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented. Section 13 records web API alignment and no-paid browser/API verification. Native API integration/installation and physical-device verification remain pending. Sections 11–12 preserve the earlier checkpoints. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
 
 ## 1. Ownership and shared baseline
 
@@ -153,6 +153,8 @@ These remain acceptance checks. The documentation merge alone ran no frontend/de
 
 ## 11. Implementation checkpoint — 4 November 2026
 
+Historical pre-integration checkpoint. The provisional wire/CSRF assumptions below are superseded by section 13 and Alex's implemented contract; they are not current integration instructions.
+
 Ben explicitly requested starting implementation and confirmed Alex’s API is not ready. Ben named iPhone for testing; model/OS and Android device details remain unknown. This session implements the first web slice under `apps/web/`, preserving the full iOS/Android and F1 requirements above. It does not implement Alex’s backend or claim G0/G1 complete.
 
 Implemented: React/TypeScript/Vite bootstrap; operator-supplied laptop address with credentialed requests and no provider-key input; paginated shared library; browse/drop, local playback/title/format/size/duration review; IndexedDB retention of pending upload file/title/key; explicit upload separate from consented processing; persisted processing operation keys; visible job status/errors, foreground polling/backoff and terminal-job polling stop; Notes/Overview/Transcript/Quiz; exact-revision source lookup, transcript pagination and loaded-page search; classifier provenance and outdated/partial/no-quiz states; pack-scoped persisted quiz drafts and immutable attempt history; frozen same-key retries after uncertain submissions; shared deletion confirmation/cache invalidation. Presentation follows Michelle’s neutral/teal exploration defaults and is not her reviewed final design.
@@ -205,3 +207,15 @@ Expo `58.0.23`, React Native `0.88.1`, Audio `58.0.11`, FileSystem `58.0.13`, SQ
 Type checks pass for both apps; the web production build passes; Metro/Hermes exports for both iOS and Android pass. The 11 existing unit tests and 13 browser tests pass. The five new recorder browser tests use Chrome’s synthetic media device to exercise real recording APIs: actual playable saved audio; excluded pause time; local persistence across reload; no API requirement; denial/retry/import; service lifetime across views; hidden-page pause and stopping while paused; incomplete-session recovery; and a 390px phone viewport with controls in view and no horizontal overflow. Test images label synthetic microphone input. The existing eight study/browser tests still pass after navigation changes.
 
 No native binary was built, signed, installed or distributed. No actual iPhone/Android microphone, Safari, 30/60-minute recording, ten-hour endurance, measured recovery loss, provider processing, API integration or Michelle usability approval is established. These remain open G0/G2/G4/G5 evidence requirements. The local browser interface is reviewable now; native readiness must be assessed on actual test phones.
+
+## 13. API integration fixes — 6 November 2026
+
+Alex explicitly requested fixing the four PR #3 review findings, then merging and deploying locally. The web adapter now reads the backend's `lecture_csrf` cookie and sends `X-CSRF-Token`, consumes `is_correct` in quiz feedback, and consumes the canonical USD budget fields without a renamed parallel wire schema. Browser fixture responses were updated to the same contract. MIME validation compares normalized container types while preserving the original upload, accepting WebM/Opus and MP4 codec parameters without treating unsupported Ogg as supported. The backend also measures valid browser WebM that omits duration metadata; Alex's spec owns those intake rules.
+
+`npm run test:contract` starts the implemented API in temporary storage using labeled provider doubles and blocks external HTTP. It verifies actual budget/score response consumption, recorder MIME acceptance, an authenticated mutation using the JS adapter's headers, and continued rejection when CSRF is absent. These checks require the pinned backend Python environment. They do not start the production worker or use the demonstration database.
+
+The browser suite includes a real API/worker flow in isolated temporary storage: synthetic microphone recording/export, WebM upload with cookie/CSRF, visible budget, explicit test-provider processing, correct/incorrect/unanswered scoring, and shared deletion. The application has no test backend fallback; doubles are injected only by test harnesses. Browser automation uses a known synthetic WAV input and supports installed Chrome or Playwright Chromium. Native device/maximum-duration/recovery and paid-provider frontend evidence remain separate.
+
+For the built local web deployment, use README's port-5173 preview instructions and the same `127.0.0.1` hostname as the port-8000 API. Operator provisioning remains separate from student flows and provider keys. The local deployment keeps paid providers disabled and preserves existing records and spending.
+
+Verified with Node 24.15.0: both app type checks and web production build pass; 12 frontend unit tests, five actual-backend contract tests and all 14 Chromium browser tests pass. The backend suite reports 57 passed, including the two durationless-WebM cases. The browser/API flow actually decodes its exported synthetic recording and verifies 100% correct, 0% incorrect and 0% unanswered scoring plus deletion. No paid request occurred; the live US$0.071294 ledger and existing study records were not used by these tests.

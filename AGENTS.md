@@ -26,6 +26,8 @@ Ben subsequently prioritized the audio recording interface and requested a moder
 
 Ben then explicitly requested creating a pull request and merging this frontend. Commit/branch publication, PR creation and normal merging are authorized. Preserve branch protection and required checks; this does not authorize application deployment or passing unverified device gates.
 
+Alex subsequently explicitly requested fixing PR #3's CSRF, recorder MIME, quiz-result and budget integration issues, then merging and deploying. This authorizes the PR-branch corrections, regression/real-API tests with labeled provider doubles, the related durationless WebM intake correction, publication and local web/API deployment. Preserve local study data/accounting and immutable source archives. Keep paid providers disabled and make no new paid request. This does not establish native installation or phone/endurance gates. Any required administrator override remains a separate explicit decision.
+
 ## Engineering and reporting rules
 
 - Distinguish direct user/meeting requirements, selected engineering merge defaults, optional expansion and verified results. Current explicit user decisions override earlier source drafts.

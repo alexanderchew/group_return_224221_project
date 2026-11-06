@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attempt, config, job, pack, recording, segment } from './fixtures';
+import { attempt, budget, config, job, pack, recording, segment } from './fixtures';
 
 async function connect(page: Page) {
   await page.goto('/');
@@ -13,7 +13,7 @@ async function api(page: Page, initial = true, customPack: unknown = pack) {
     const url = new URL(route.request().url()), path = url.pathname.replace('/api/v1', '');
     let body: unknown;
     if (path === '/config') body = config;
-    else if (path === '/budget') body = { total: '20.00', settled: '1.00', reserved: '0.50', uncertain: '0.00', contingency: '2.00', available: '16.50' };
+    else if (path === '/budget') body = budget;
     else if (path === '/recordings') body = route.request().method() === 'POST' ? recording : { items: initial ? [recording] : [], next_cursor: null };
     else if (path.endsWith('/audio')) return route.fulfill({ status: 404 });
     else if (path.endsWith('/study-pack')) body = customPack;
@@ -78,6 +78,7 @@ test('quiz submission survives a lost response, locks answers, restores feedback
     return route.fulfill({ status: 201, json: attempt });
   });
   await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();
+  await expect(page.getByText('Demo allowance: $16.50 available of $20.00')).toBeVisible();
   await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByLabel('They vibrate around fixed positions.').check();
   await page.getByRole('button', { name: 'Submit answers' }).click();
@@ -86,6 +87,7 @@ test('quiz submission survives a lost response, locks answers, restores feedback
   await page.reload(); await page.getByRole('button', { name: 'Study library', exact: true }).click(); await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByRole('button', { name: 'Retry same submission' }).click();
   await expect(page.getByRole('heading', { name: '1 of 1 correct' })).toBeVisible();
+  await expect(page.getByText('Correct', { exact: true })).toBeVisible();
   expect(keys[0]).toBe(keys[1]); expect(bodies[0]).toEqual(bodies[1]);
   expect(bodies[1]).toEqual({ study_pack_id: pack.id, answers: [{ question_id: 'question-1', option_id: 'a' }] });
   await page.getByRole('button', { name: 'Start a new practice attempt' }).click();

@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
-// Client consumption guards derived from Alex's spec, NOT an independent API schema.
-// Replace these with generated types/validators when Alex publishes OpenAPI.
-// Wire details not fixed in the prose are isolated here; see Ben's integration notes.
+// Consumption guards for Alex's implemented API; the generated backend contract
+// remains authoritative. Cross-stack tests verify actual backend responses.
 const id = z.string().min(1);
 const seconds = z.number().finite().nonnegative();
 const money = z.string().regex(/^\d+(\.\d+)?$/);
@@ -15,7 +14,7 @@ export const configSchema = z.object({
   capacity_status: z.enum(['prototype_limited', 'full_target_verified']),
   accepted_mime_types: z.array(id).min(1), workspace_mode: z.literal('shared_demo'),
 });
-export const budgetSchema = z.object({ total: money, settled: money, reserved: money, uncertain: money, contingency: money, available: money });
+export const budgetSchema = z.object({ currency: z.literal('USD'), ceiling_usd: money, settled_usd: money, reserved_usd: money, uncertain_usd: money, contingency_usd: money, available_usd: money });
 export const recordingSchema = z.object({
   id, title: z.string(), source: z.enum(['mobile', 'web']), recorded_at: z.string().nullable(),
   created_at: z.string(), duration_seconds: seconds, byte_size: z.number().int().nonnegative(), mime_type: id,
@@ -51,7 +50,7 @@ export const packSchema = z.object({
 export const attemptSchema = z.object({
   id, study_pack_id: id, correct_count: z.number().int().nonnegative(), total_count: z.number().int().positive(),
   unanswered_count: z.number().int().nonnegative(), percentage: z.number().finite().min(0).max(100), practice_revealed: z.boolean(),
-  results: z.array(z.object({ question_id: id, selected_option_id: id.nullable(), correct_option_id: id, correct: z.boolean(), explanation: z.string(), evidence_segment_ids: evidence })),
+  results: z.array(z.object({ question_id: id, selected_option_id: id.nullable(), correct_option_id: id, is_correct: z.boolean(), explanation: z.string(), evidence_segment_ids: evidence })),
 });
 export type Config = z.infer<typeof configSchema>;
 export type Recording = z.infer<typeof recordingSchema>;
@@ -71,9 +70,10 @@ export function connectionUrl(value: string) {
   return url.href.replace(/\/$/, '').replace(/\/api\/v1$/, '');
 }
 function csrfToken() {
-  // Provisional deployment convention; this is a CSRF token, never a provider key.
-  const cookie = document.cookie.split('; ').find(c => c.startsWith('csrftoken='));
-  return cookie ? decodeURIComponent(cookie.slice('csrftoken='.length)) : '';
+  // The readable cookie is paired with the backend's HttpOnly demo-access cookie.
+  // This is a CSRF token, never a provider key.
+  const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('lecture_csrf='));
+  return cookie ? decodeURIComponent(cookie.slice('lecture_csrf='.length)) : '';
 }
 export class Api {
   constructor(public base: string, private fetcher: typeof fetch = (...args) => fetch(...args)) {}
@@ -82,7 +82,7 @@ export class Api {
     const mutation = options.method && options.method !== 'GET';
     if (mutation) {
       const token = csrfToken();
-      if (token) headers.set('X-CSRFToken', token);
+      if (token) headers.set('X-CSRF-Token', token);
     }
     let response: Response;
     try {
@@ -116,7 +116,8 @@ export function duration(value: number | null) {
 export function validateFile(file: File, config: Config, measuredDuration: number | null) {
   if (!file.size) return 'This file is empty. Choose another audio file.';
   if (file.size > config.max_audio_bytes) return 'This file exceeds the active upload size limit. Choose a smaller file.';
-  if (file.type && !config.accepted_mime_types.includes(file.type)) return 'This audio format is not currently supported by the laptop.';
+  const mediaType = (value: string) => value.split(';', 1)[0].trim().toLowerCase();
+  if (file.type && !config.accepted_mime_types.some(type => mediaType(type) === mediaType(file.type))) return 'This audio format is not currently supported by the laptop.';
   if (measuredDuration !== null && measuredDuration > config.max_duration_seconds) return 'This file exceeds the active duration limit.';
   return null; // The laptop must decode and validate content, including unknown MIME/duration.
 }
