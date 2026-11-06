@@ -8,6 +8,7 @@ import { expect, test } from '@playwright/test';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 let service: ChildProcess;
 let api: string;
+const frontendOrigin = new URL(process.env.LECTURE_WEB_TEST_URL ?? 'http://127.0.0.1:4173').origin;
 test.beforeAll(async () => {
   const listener = createServer();
   listener.listen(0, '127.0.0.1');
@@ -29,14 +30,14 @@ def no_network(*args, **kwargs):
     raise AssertionError('Browser tests cannot call paid providers or external HTTP.')
 httpx.HTTPTransport.handle_request = no_network
 with tempfile.TemporaryDirectory(prefix='lecture-browser-contract-') as directory:
-    app = create_app(Settings(data_dir=Path(directory), allowed_origins=('http://127.0.0.1:4173',)), TestProviders())
+    app = create_app(Settings(data_dir=Path(directory), allowed_origins=(os.environ['LECTURE_BROWSER_TEST_ORIGIN'],)), TestProviders())
     with app.state.store.tx() as cx:
         cx.execute("UPDATE kv SET value='browser-test-access-only' WHERE name='demo_token'")
     uvicorn.run(app, host='127.0.0.1', port=int(os.environ['LECTURE_BROWSER_TEST_PORT']), access_log=False, log_level='warning')
 `;
   service = spawn(process.env.LECTURE_TEST_PYTHON ?? `${root}.venv/bin/python`, ['-c', script], {
     cwd: root, stdio: 'ignore',
-    env: { ...process.env, ELEVENLABS_API_KEY: '', OPENAI_API_KEY: '', LECTURE_MODEL_DIR: '', LECTURE_BROWSER_TEST_PORT: String(port) },
+    env: { ...process.env, ELEVENLABS_API_KEY: '', OPENAI_API_KEY: '', LECTURE_MODEL_DIR: '', LECTURE_BROWSER_TEST_PORT: String(port), LECTURE_BROWSER_TEST_ORIGIN: frontendOrigin },
   });
   await expect.poll(async () => {
     try { return (await fetch(`${api}/health`)).status; } catch { return 0; }

@@ -4,20 +4,68 @@ Working descriptor for an IGCSE study app: record or import a lesson, save its t
 
 **Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. Native API integration/installation, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed.
 
-To run the frontend with Node 24:
+## Run locally
+
+The frontend is **[http://127.0.0.1:5173/](http://127.0.0.1:5173/)**. The API documentation is [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Both services run on Alex’s laptop; they are available while their server terminals are running.
+
+Use Node 24, Python 3.13, `uv`, and FFmpeg/ffprobe on your PATH. From the repository root, install the pinned dependencies once:
 
 ```sh
+uv sync --frozen
 npm ci
-npm run dev
 ```
 
-Open the localhost address printed by Vite. The recorder opens first and works without the API: Start, real input meter, Pause/Resume, Stop/save, local playback, import/export and browser-local recordings. Use HTTPS or localhost and allow microphone access. Keep the page visible: switching apps or locking a phone can interrupt browser capture. Export important audio; browser storage can be evicted. The separate Study library uses Alex’s implemented API after browser access provisioning. There is no built-in fake backend or provider-key input.
+**Terminal 1 — start the backend without paid providers:**
 
-The native iPhone/Android app is in `apps/mobile/`. Start its development server with `npm run mobile`. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after installing the corresponding platform tooling and provisioning the test device. These build/install steps have **not** been performed. Background recording configuration requires a development build; an exported JavaScript bundle or browser preview does not prove native capture works.
+```sh
+env -u ELEVENLABS_API_KEY -u OPENAI_API_KEY ./scripts/start_demo.command --no-prompt
+```
 
-Validation commands: `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run test:contract`, `npm run build`, `npm run test:browser`, and `npm run export:mobile`. Contract tests require the backend `.venv` (`uv sync --frozen`) or `LECTURE_TEST_PYTHON` pointing to that environment. Browser tests use isolated profiles and a generated synthetic WAV microphone. Most study tests use synthetic API responses; one starts the actual API/worker in temporary storage with labeled provider doubles and external HTTP disabled. None prove real microphones, Safari, native devices, paid providers or long-session behavior. Google Chrome is the default; alternatively run `npx playwright install chromium` then `PLAYWRIGHT_CHANNEL=chromium npm run test:browser`. See [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026).
+Leave this terminal running. It prints a **demo connection code** for browser access. This command clears inherited provider keys, makes no paid startup request, and retains the existing database and shared US$20 spending ledger under `var/demo/`.
 
-For a local built web deployment, run `npm run build` then `npm run preview --workspace apps/web -- --port 5173 --strictPort`. Open `http://127.0.0.1:5173`; keep its terminal running. Start the API separately on port 8000. In the same browser, use `http://127.0.0.1:8000/operator/connect` with the **demo connection code** from the backend terminal, then connect the web app to `http://127.0.0.1:8000`. Use the same `127.0.0.1` hostname for both so the demo and CSRF cookies are available. This local origin is already allowed by the backend; no public deployment is implied. Paid providers remain disabled when started without keys.
+**Terminal 2 — build and start the frontend:**
+
+```sh
+npm run build
+npm run preview --workspace apps/web -- --port 5173 --strictPort
+```
+
+Leave this terminal running and open **[the frontend](http://127.0.0.1:5173/)**. For development, `npm run dev` also serves the app on port 5173. Run these commands from the same checkout as Terminal 1. Stop a service with Ctrl+C in its terminal; restart it if the browser reports “connection refused.” If port 5173 is already serving this app, use that instance rather than starting a second one.
+
+### Connect this browser to the backend
+
+1. Open [browser access setup](http://127.0.0.1:8000/operator/connect) in the same browser/profile as the frontend. Enter the **demo connection code** printed by Terminal 1 and select **Connect**. Provider API keys belong only in the backend’s private terminal prompt.
+2. Open [the frontend](http://127.0.0.1:5173/), select **Connect laptop** (or **Laptop setup**), and enter `http://127.0.0.1:8000` as the laptop service address. Select **Connect**.
+3. Confirm that **Study library** shows the uploaded lectures and demo allowance. The browser retains the host setting and access cookies; repeat provisioning after clearing cookies or using a different profile.
+
+Use `127.0.0.1` for both links so the access and CSRF cookies share the hostname. The backend already allows this local frontend origin. Phone access needs a separate trusted LAN/HTTPS setup; localhost on a phone refers to that phone.
+
+### Record, upload, and study
+
+The **Record** screen works without the API. Allow microphone access when you choose **Start recording**, use Pause/Resume as needed, then select **Stop & save**. Open the saved recording for playback/export. Browser capture is foreground-only: keep the page visible and export important audio because browser storage can be evicted.
+
+To upload, select **Use for study**, review the file/title, acknowledge the shared-library scope and select **Upload to shared library**. Uploading does not start a paid request. Every authorized demo browser sees the same uploaded library.
+
+With paid providers disabled, selecting **Process lecture** safely blocks at the missing-provider stage; fresh transcription, notes and quiz generation cannot run live. Existing generated lectures remain readable and their quizzes can still be scored locally for free. The saved **Live E2E — synthetic photosynthesis narration** is a previously generated example, not a new provider result.
+
+For an explicitly authorized live provider run, stop Terminal 1 and run `./scripts/start_demo.command`, entering keys privately at its hidden prompts. Merely starting the server does not spend money; processing uses the persistent shared allowance. Do not enter provider keys in the frontend, README, chat or `.env` files.
+
+### Test the complete flow with zero paid calls
+
+The automated flow uses a synthetic WAV microphone, real browser recording/export/upload, and the actual API/worker with **labeled test providers in temporary storage**. It verifies budget display, correct/incorrect/unanswered quiz scoring and deletion. External provider HTTP is blocked. It does not switch the deployed backend to fake providers or use its real study database.
+
+With the frontend already running on port 5173, run:
+
+```sh
+npx playwright install chromium
+LECTURE_WEB_TEST_URL=http://127.0.0.1:5173 PLAYWRIGHT_CHANNEL=chromium npm run test:browser --workspace apps/web -- --grep 'recorded WebM'
+```
+
+This targets the deployed frontend and starts a disposable test API on a separate localhost port; its private test browser connects to that API. Your normal browser remains connected to port 8000. `PLAYWRIGHT_BROWSERS_PATH` may select an existing project-local browser installation. Omit `LECTURE_WEB_TEST_URL` to test against the automatically started development server on port 4173.
+
+Other verification commands are `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run test:contract`, `.venv/bin/pytest -q`, and `npm run test:browser` for the full browser suite. Contract/browser API tests require the backend `.venv`, or `LECTURE_TEST_PYTHON` pointing to that environment. Google Chrome is the browser-suite default; set `PLAYWRIGHT_CHANNEL=chromium` for Playwright’s installed Chromium.
+
+The native iPhone/Android source is in `apps/mobile/`; start its development server with `npm run mobile`. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after platform tooling/device provisioning. Native installation, actual phone microphones, Safari, long-session/endurance and recovery guarantees remain unverified. See [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026).
 
 The active specification set has three owners:
 
@@ -33,25 +81,13 @@ The merged contract uses `/api/v1/recordings`, `/config`, `StudyPack` and second
 
 [AGENTS.md](AGENTS.md) defines working rules. The [premerge source archive](docs/planning/archive/lecture-companion-premerge-2026-11-04/MERGE_SOURCES.md) preserves both document sets; the [RiftTable archive](docs/planning/archive/rifttable-ar-2026-11-04/ARCHIVE.md) remains historical. The previously deleted StudySmart notebook is not restored. Archived plans/APIs/instructions are not active authority.
 
-## Run Alex’s backend locally
+## Backend details
 
-Dependencies are pinned in `pyproject.toml` and `uv.lock`. Alex verified a Python 3.13 `.venv`, FFmpeg and the pinned dependencies on his laptop; other checkouts need their own environment setup. To reproduce the environment, use `uv sync --frozen`.
+Backend versions are pinned in `pyproject.toml` and `uv.lock`; frontend versions are pinned in `package-lock.json`. The local data directory is `var/demo/`, including audio, SQLite state and content-free spending records. Local data, provider keys, app-access provisioning, dependency directories and generated builds are excluded from Git. Restarting or deleting study data does not reset spending.
 
-```sh
-./scripts/start_demo.command
-```
+The active verified backend intake limit is **60 minutes and 128 MiB**. Ten hours/2 GB remain full targets and are shown separately in `/config` as `prototype_limited`. WAV, MP3, M4A/AAC and WebM/Opus are supported; browser WebM without duration metadata is measured by a bounded local decode. There is no verified ten-hour/device endurance claim. A trained TensorFlow artifact is not installed; missing custom inference remains explicitly unavailable.
 
-The terminal prompts privately for ElevenLabs/OpenAI keys; Enter leaves a provider disabled. Provider keys stay in process memory/environment and are not saved to `.env` or sent to clients. Startup does not make a paid provider request. For a key-free local run:
-
-```sh
-./scripts/start_demo.command --no-prompt
-```
-
-Open [API documentation](http://127.0.0.1:8000/docs). The terminal displays a **demo connection code**, distinct from your provider keys. Use Swagger’s **Authorize** button with that code, or open [browser access setup](http://127.0.0.1:8000/operator/connect). Cookie-authenticated mutations also require `X-CSRF-Token` matching the `lecture_csrf` cookie. Every authorized client shares the uploaded demo library.
-
-Local data and content-free spending records stay under the ignored, private `var/demo/` directory. Stop with Ctrl+C in the server terminal. To add provider keys to an already-running key-free server, stop it and restart the normal launcher. For phone access, explicitly bind to your laptop’s trusted LAN IP with `--host <laptop-LAN-IP>`; the default localhost binding is laptop-only.
-
-The initial verified intake envelope is **60 minutes and 128 MiB**, with ten hours/2 GB retained as the full target. WAV, MP3, M4A/AAC and WebM/Opus are decoded/normalized server-side. `/config` reports active and target limits and `prototype_limited`; no ten-hour/device/provider claim is inferred from synthetic intake tests. Missing provider keys yield a persisted blocked job. A compatible optional TensorFlow bundle can be connected later; missing artifacts stay explicitly unavailable.
+Backend checks and contract export:
 
 ```sh
 .venv/bin/pytest -q
@@ -59,7 +95,7 @@ The initial verified intake envelope is **60 minutes and 128 MiB**, with ten hou
 .venv/bin/python scripts/export_contract.py
 ```
 
-The generated [OpenAPI contract](fixtures/contracts/openapi.json) comes from the implementation. Detailed setup/behavior/evidence and outstanding limitations remain in [Alex’s spec](docs/specs/ALEX_BACKEND_SPEC.md#14-backend-implementation-and-local-operation); it is the only active backend plan. Implementation lives under `services/api/lecture_backend/`, with meaningful tests under `tests/`. Real API keys, media, local state and `.venv` are excluded from Git. The subsequent merge/deploy instruction authorizes publishing this backend to GitHub main and restarting the local laptop service, with no additional paid processing.
+The generated [OpenAPI contract](fixtures/contracts/openapi.json) comes from the implementation. [Alex’s spec](docs/specs/ALEX_BACKEND_SPEC.md#14-backend-implementation-and-local-operation) owns backend behavior/limits; [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026) records web verification. API/worker source is under `services/api/lecture_backend/`. Provider keys are entered only through the launcher and are never saved by default or sent to the frontend.
 
 ## First real-provider test
 
