@@ -4,6 +4,20 @@ Working descriptor for an IGCSE study app: record or import a lesson, save its t
 
 **Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. Native API integration/installation, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed.
 
+## Screenshots
+
+Captured locally on 6 November 2026. The website and API images show the running laptop services; no provider request was made for these screenshots.
+
+| Website — recording screen | Mobile app — interface preview |
+| --- | --- |
+| <img src="docs/screenshots/web-app.jpg" alt="Lecture Companion website with recording controls and local recording library" width="720"> | <img src="docs/screenshots/mobile-interface-preview.jpg" alt="Expo mobile interface browser preview with capture disabled, recording controls and bottom navigation" width="260"> |
+
+The mobile image renders the existing Expo [`App.tsx`](apps/mobile/App.tsx) through React Native Web at 390 × 844. Native capture, storage and device services were disabled in this screenshot-only preview. It is not an installed iPhone/Android app screenshot; native device verification remains pending.
+
+**Backend API — live Swagger documentation**
+
+![Lecture Companion FastAPI documentation showing health, configuration, budget and recording endpoints](docs/screenshots/api-docs.jpg)
+
 ## Run locally
 
 The frontend is **[http://127.0.0.1:5173/](http://127.0.0.1:5173/)**. The API documentation is [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Both services run on Alex’s laptop; they are available while their server terminals are running.
