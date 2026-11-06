@@ -1,8 +1,8 @@
 # Ben — Mobile Application and Web Frontend Specification
 
-Version 0.5 · 2026-11-06 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.6 · 2026-11-06 · Project name undecided; “Lecture Companion” is a working descriptor.
 
-**Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented. Section 13 records web API alignment and no-paid browser/API verification. Native API integration/installation and physical-device verification remain pending. Sections 11–12 preserve the earlier checkpoints. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
+**Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented. Section 13 records web API alignment and no-paid browser/API verification; section 14 records native Android launch/navigation in Expo Go on an emulator. Native API integration, standalone development builds, iOS installation and physical-device verification remain pending. Sections 11–12 preserve the earlier checkpoints. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
 
 ## 1. Ownership and shared baseline
 
@@ -219,3 +219,15 @@ The browser suite includes a real API/worker flow in isolated temporary storage:
 For the built local web deployment, use README's port-5173 preview instructions and the same `127.0.0.1` hostname as the port-8000 API. Operator provisioning remains separate from student flows and provider keys. The local deployment keeps paid providers disabled and preserves existing records and spending.
 
 Verified with Node 24.15.0: both app type checks and web production build pass; 12 frontend unit tests, five actual-backend contract tests and all 14 Chromium browser tests pass. The backend suite reports 57 passed, including the two durationless-WebM cases. The browser/API flow actually decodes its exported synthetic recording and verifies 100% correct, 0% incorrect and 0% unanswered scoring plus deletion. No paid request occurred; the live US$0.071294 ledger and existing study records were not used by these tests.
+
+## 14. Native Android emulator checkpoint — 6 November 2026
+
+Alex explicitly requested running the actual mobile app in a simulator and replacing the README's browser interface preview with a real app screenshot. Alex subsequently approved the Android SDK licence and local emulator/tool installation. The SDK, virtual device, Expo client cache and local evidence live under ignored `var/mobile-native/`; generated development state is also ignored. No cloud build, paid provider call or production study-data write is involved.
+
+The unchanged `apps/mobile/` source runs in **native Expo Go 58.0.5**, matching Expo 58.0.23, React 19.3.0 and React Native 0.88.1. Runtime: Android Emulator 37.2.13, Pixel 6 device profile, Android 16 / API 36 AOSP ARM64 image, 1080 × 2400 display. The foreground activity is `host.exp.exponent/.experience.ExperienceActivity`. This uses the actual React Native and Expo native modules, without the browser screenshot harness or module substitutes.
+
+Verified: the recorder renders after dismissing Expo Go's first-run developer menu; Record → Library shows the empty local library and returns to Record; the Android error log has no ReactNativeJS/AndroidRuntime errors. The existing mobile typecheck passes. The README image is the original PNG captured by Google's Android CLI from the emulator display, with Expo Go's floating tools button visible. Its source capture and accessibility layouts are retained locally. Web and API screenshots are unchanged.
+
+For the configured laptop, source `var/mobile-native/env.sh`, start `emulator -avd lecture_companion_sdk58 -no-snapshot`, then in another terminal with the same environment run `npm run start --workspace apps/mobile -- --go --localhost --android`. The local environment file and SDK are not portable repository dependencies; other machines first need their own Android SDK, virtual device and licence setup. The current Metro server uses localhost port 8081 and ADB reverse, without a public tunnel.
+
+This is native launch/navigation evidence in an Expo Go host. No standalone application APK was built, no iOS simulator was run, and no microphone permission was requested for this screenshot. Native capture, playback/import/export, background configuration, interruption/recovery, phone installation, 30/60-minute or ten-hour endurance, native backend integration and Michelle's usability review remain separate open gates. Earlier section 12 evidence describes its original 4 November checkpoint.
