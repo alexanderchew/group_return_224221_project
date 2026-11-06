@@ -2,7 +2,22 @@
 
 Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials; the team trains a TensorFlow/Keras subject classifier.
 
-**Status: initial backend implemented.** FastAPI, local SQLite/files, a persistent worker, provider adapters, the US$20 controller and terminal launcher are available. Mobile/web clients and a trained classifier are not implemented. One explicitly authorized 60-second real-provider test passed transcription, notes, quiz generation and scoring under a US$2 test cap; no mobile/endurance or trained-model success is claimed.
+**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. Native API integration/installation, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed.
+
+To run the frontend with Node 24:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open the localhost address printed by Vite. The recorder opens first and works without the API: Start, real input meter, Pause/Resume, Stop/save, local playback, import/export and browser-local recordings. Use HTTPS or localhost and allow microphone access. Keep the page visible: switching apps or locking a phone can interrupt browser capture. Export important audio; browser storage can be evicted. The separate Study library uses Alex’s implemented API after browser access provisioning. There is no built-in fake backend or provider-key input.
+
+The native iPhone/Android app is in `apps/mobile/`. Start its development server with `npm run mobile`. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after installing the corresponding platform tooling and provisioning the test device. These build/install steps have **not** been performed. Background recording configuration requires a development build; an exported JavaScript bundle or browser preview does not prove native capture works.
+
+Validation commands: `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run test:contract`, `npm run build`, `npm run test:browser`, and `npm run export:mobile`. Contract tests require the backend `.venv` (`uv sync --frozen`) or `LECTURE_TEST_PYTHON` pointing to that environment. Browser tests use isolated profiles and a generated synthetic WAV microphone. Most study tests use synthetic API responses; one starts the actual API/worker in temporary storage with labeled provider doubles and external HTTP disabled. None prove real microphones, Safari, native devices, paid providers or long-session behavior. Google Chrome is the default; alternatively run `npx playwright install chromium` then `PLAYWRIGHT_CHANNEL=chromium npm run test:browser`. See [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026).
+
+For a local built web deployment, run `npm run build` then `npm run preview --workspace apps/web -- --port 5173 --strictPort`. Open `http://127.0.0.1:5173`; keep its terminal running. Start the API separately on port 8000. In the same browser, use `http://127.0.0.1:8000/operator/connect` with the **demo connection code** from the backend terminal, then connect the web app to `http://127.0.0.1:8000`. Use the same `127.0.0.1` hostname for both so the demo and CSRF cookies are available. This local origin is already allowed by the backend; no public deployment is implied. Paid providers remain disabled when started without keys.
 
 The active specification set has three owners:
 
@@ -12,7 +27,7 @@ The active specification set has three owners:
 | Ben — mobile and web frontend | [Functional frontend](docs/specs/BEN_FRONTEND_SPEC.md): iPhone/Android/web recording/import, local library, API integration, study/quiz UI and recovery |
 | Michelle — interface design | [Mobile and web interface design](docs/specs/MICHELLE_INTERFACE_DESIGN_SPEC.md): information/interaction design, tokens/components, screen states, accessibility and implemented usability review |
 
-Confirmed operating choices: the user is Alex; support iPhone/iOS and Android; normal recordings last 30–60 minutes with a ten-hour maximum; host/save the demo on Alex’s current laptop; control total API usage within US$20; enter provider keys privately through the implemented terminal launcher. Use latest stable compatible packages at setup, then pin verified versions.
+Confirmed operating choices: Alex owns backend/integration and Ben owns frontend; support iPhone/iOS and Android; normal recordings last 30–60 minutes with a ten-hour maximum; host/save the demo on Alex’s current laptop; control total API usage within US$20; enter provider keys privately through the implemented terminal launcher. Use latest stable compatible packages at setup, then pin verified versions.
 
 The merged contract uses `/api/v1/recordings`, `/config`, `StudyPack` and seconds for media times. Authorized demo devices share one controlled uploaded library; unuploaded originals remain local. Build a short real end-to-end slice first while retaining normal/max-duration and browser-recording requirements in the full target. A baseline/fallback is never presented as the team’s trained model.
 
@@ -20,7 +35,7 @@ The merged contract uses `/api/v1/recordings`, `/config`, `StudyPack` and second
 
 ## Run Alex’s backend locally
 
-Dependencies are pinned in `pyproject.toml` and `uv.lock`. The current worktree already has a Python 3.13 `.venv`, FFmpeg and the dependencies installed. To reproduce the environment, use `uv sync --frozen`.
+Dependencies are pinned in `pyproject.toml` and `uv.lock`. Alex verified a Python 3.13 `.venv`, FFmpeg and the pinned dependencies on his laptop; other checkouts need their own environment setup. To reproduce the environment, use `uv sync --frozen`.
 
 ```sh
 ./scripts/start_demo.command

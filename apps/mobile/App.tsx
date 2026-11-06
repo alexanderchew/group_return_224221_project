@@ -1,0 +1,94 @@
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Alert, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import * as DocumentPicker from 'expo-document-picker';
+import * as Sharing from 'expo-sharing';
+import { formatTime, nativeRecorder } from './src/recorder';
+import type { Lesson } from './src/recorder';
+
+const colors = { ink: '#26323e', muted: '#7a8794', green: '#3b6558', light: '#f6f7f9', line: '#e2e7ec', red: '#d85e50' };
+function Mic({ small = false }: { small?: boolean }) {
+  return <View accessible={false} style={[s.mic, small && { transform: [{ scale: .75 }] }]}><View style={s.micCapsule} /><View style={s.micArc} /><View style={s.micStem} /></View>;
+}
+function Action({ label, onPress, disabled, kind = 'primary', symbol }: { label: string; onPress: () => void; disabled?: boolean; kind?: 'primary' | 'secondary' | 'quiet'; symbol?: string }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [s.action, kind === 'secondary' && s.secondary, kind === 'quiet' && s.quiet, (disabled || pressed) && { opacity: .55 }]}>{symbol && <Text style={[s.actionText, kind !== 'primary' && s.darkText]}>{symbol}</Text>}<Text style={[s.actionText, kind !== 'primary' && s.darkText]}>{label}</Text></Pressable>;
+}
+export default function App() {
+  return <SafeAreaProvider><StatusBar barStyle="dark-content" /><Main /></SafeAreaProvider>;
+}
+function Main() {
+  const state = useSyncExternalStore(nativeRecorder.subscribe, nativeRecorder.getSnapshot);
+  const [screen, setScreen] = useState<'record' | 'library'>('record');
+  const [title, setTitle] = useState('');
+  const [tips, setTips] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { void nativeRecorder.initialize(); }, []);
+  const active = ['permission', 'recording', 'paused', 'saving'].includes(state.phase);
+  const recording = state.phase === 'recording', paused = state.phase === 'paused';
+  const busy = state.phase === 'permission' || state.phase === 'saving';
+  const status = { idle: 'Ready when you are', permission: 'Allow microphone access', recording: 'Recording', paused: 'Paused', saving: 'Saving your audio…', saved: 'Saved on this phone', error: 'Check your recording' }[state.phase];
+  async function importAudio() {
+    if (active || importing) return;
+    setImporting(true); setError('');
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', multiple: false, copyToCacheDirectory: true });
+      if (!result.canceled) { await nativeRecorder.import(result.assets[0].uri, result.assets[0].name); setScreen('library'); }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Audio could not be imported.'); }
+    finally { setImporting(false); }
+  }
+  return <SafeAreaView style={s.app} edges={['top', 'bottom']}>
+    <View style={s.header}><View style={s.brandMark}><Text style={s.brandLetter}>L</Text></View><View style={{ flex: 1 }}><Text style={s.brand}>Lecture Companion</Text><Text style={s.tagline}>Make room for understanding.</Text></View><View style={s.localTag}><View style={s.greenDot} /><Text style={s.localTagText}>LOCAL</Text></View></View>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <Text style={s.eyebrow}>A LITTLE FOCUS. A LOT TO REMEMBER.</Text><Text style={s.heading}>{screen === 'record' ? 'Capture the lesson.' : 'Your recordings.'}</Text><Text style={s.subtitle}>{screen === 'record' ? 'Be here now. Revisit the details later.' : 'Saved on this phone. Always yours to revisit.'}</Text>
+      {screen === 'record' ? <>
+        <View style={s.card}>
+          <View style={s.titleRow}><View style={s.micTile}><Mic /></View><View style={{ flex: 1 }}><Text style={s.microLabel}>NEW RECORDING</Text><TextInput style={s.titleInput} placeholder="Give your lesson a title" placeholderTextColor="#576573" accessibilityLabel="Recording title" value={title} editable={!active} maxLength={240} onChangeText={setTitle} /></View><Text style={s.audioBadge}>AUDIO</Text></View>
+          <View style={s.display}><View style={s.stateRow}><View style={[s.statusDot, recording && { backgroundColor: colors.red }]} /><Text accessibilityLiveRegion="polite" style={[s.stateText, recording && { color: '#af473e' }]}>{status}</Text></View><Text style={s.clock} accessibilityLabel={`${Math.floor(state.seconds)} seconds recorded`}>{formatTime(state.seconds)}<Text style={s.clockFraction}>.{Math.floor((state.seconds % 1) * 10)}</Text></Text>
+            <View style={s.waveform} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{state.levels.map((level, index) => <View key={index} style={[s.waveBar, { height: 3 + level * 64, opacity: .3 + index / state.levels.length * .7 }]} />)}<View style={s.playhead} /></View>
+            <View style={s.waveScale}><Text style={s.scaleText}>INPUT</Text><Text style={s.scaleText}>LIVE SOUND LEVEL</Text><Text style={s.scaleText}>NOW</Text></View>
+            <Text style={s.inputHint}>{recording ? state.levels.at(-1)! > .03 ? 'Microphone is picking up audio' : 'Listening · move closer if your voice is quiet' : paused ? 'Take your time. Resume when you’re ready.' : 'Your microphone starts when you press Record.'}</Text>
+          </View>
+          <View style={s.controls}>{recording || paused ? <><Action label={paused ? 'Resume' : 'Pause'} symbol={paused ? '▶' : 'Ⅱ'} kind="secondary" onPress={() => paused ? nativeRecorder.resume() : nativeRecorder.pause()} /><Action label="Stop & save" symbol="■" onPress={() => void nativeRecorder.stop()} /></> : <Action label={busy ? state.phase === 'permission' ? 'Opening microphone…' : 'Saving…' : state.phase === 'saved' ? 'Record another lesson' : 'Start recording'} symbol={busy ? undefined : '●'} disabled={busy || importing || state.phase === 'error' && !!state.lesson} onPress={() => void nativeRecorder.start(title)} />}</View>
+          <Text style={s.privateNote}>✓  Local first. Nothing is uploaded automatically.</Text>
+          {!!state.notice && <Text style={s.notice}>{state.notice}</Text>}
+          {!!state.error && <View style={s.errorPanel}><Text style={s.error} accessibilityRole="alert">{state.error}</Text>{state.lesson ? <Action kind="quiet" label="Retry saving audio" onPress={() => void nativeRecorder.retrySave()} /> : <Action kind="quiet" label="Open phone settings" onPress={() => void Linking.openSettings()} />}</View>}
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: tips }} onPress={() => setTips(!tips)} style={s.tipsToggle}><Text style={s.tipsText}>Recording tips & recovery {tips ? '−' : '+'}</Text></Pressable>
+          {tips && <Text style={s.tipsBody}>The timer excludes pauses. Save before closing the app. Calls, microphone changes or your phone’s system may interrupt capture. Recovered audio can be incomplete. Export important lessons for a separate copy.</Text>}
+        </View>
+        <View style={s.sectionHeading}><Text style={s.sectionTitle}>Recent recordings <Text style={s.count}>{state.lessons.length}</Text></Text><Action label="Import" symbol="↥" kind="quiet" disabled={active || importing} onPress={() => void importAudio()} /></View>
+        {state.lessons.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>♫</Text><Text style={s.emptyTitle}>Good things start here.</Text><Text style={s.emptyCopy}>Your saved lessons will appear here.</Text></View> : <>{state.lessons.slice(0, 3).map(lesson => <LessonCard key={lesson.id} lesson={lesson} disabled={active} />)}<Action label="View all recordings" kind="quiet" onPress={() => setScreen('library')} /></>}
+      </> : <><View style={s.libraryHeader}><Text style={s.sectionTitle}>On this phone · {state.lessons.length}</Text><Action kind="quiet" label="Import audio" symbol="↥" disabled={active || importing} onPress={() => void importAudio()} /></View>{state.lessons.length === 0 && <View style={s.empty}><Text style={s.emptyTitle}>Your first lesson starts with Record.</Text><Action label="Record a lesson" onPress={() => setScreen('record')} /></View>}{state.lessons.map(lesson => <LessonCard key={lesson.id} lesson={lesson} disabled={active} />)}<Text style={s.serviceNote}>Study materials will be available after connecting to Alex’s service. Your local audio does not need a connection.</Text></>}
+      {!!error && <Text style={s.error} accessibilityRole="alert">{error}</Text>}
+    </ScrollView>
+    <View style={s.bottomNav}><Pressable style={s.navItem} accessibilityRole="button" accessibilityState={{ selected: screen === 'record' }} onPress={() => setScreen('record')}><View style={[s.navIcon, screen === 'record' && s.navSelected]}><Mic small /></View><Text style={[s.navText, screen === 'record' && { color: colors.green }]}>Record{recording ? ' •' : ''}</Text></Pressable><Pressable style={s.navItem} accessibilityRole="button" accessibilityState={{ selected: screen === 'library' }} onPress={() => setScreen('library')}><View style={[s.navIcon, screen === 'library' && s.navSelected]}><Text style={s.libraryIcon}>▤</Text></View><Text style={[s.navText, screen === 'library' && { color: colors.green }]}>Library</Text></Pressable></View>
+  </SafeAreaView>;
+}
+function LessonCard({ lesson, disabled }: { lesson: Lesson; disabled: boolean }) {
+  const [opened, setOpened] = useState(false);
+  const [error, setError] = useState('');
+  return <View style={s.lessonCard}><Pressable accessibilityRole="button" accessibilityState={{ expanded: opened }} onPress={() => setOpened(!opened)} style={s.lessonRow}><View style={s.fileIcon}><Text style={{ color: '#698b7b' }}>▶</Text></View><View style={{ flex: 1 }}><Text style={s.lessonTitle} numberOfLines={2}>{lesson.title}</Text><Text style={s.lessonMeta}>{new Date(lesson.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {formatTime(lesson.durationSeconds)} · {lesson.available ? lesson.state === 'interrupted' ? 'Recovered partial' : 'Local' : 'File missing'}</Text></View><Text style={{ color: '#8998a4' }}>{opened ? '−' : '+'}</Text></Pressable>
+    {opened && <View style={s.lessonDetails}>{lesson.available && <Player uri={lesson.uri} disabled={disabled} />}<View style={s.detailActions}><Action label="Export audio" kind="quiet" disabled={disabled || !lesson.available} onPress={() => { void (async () => { try { if (!await Sharing.isAvailableAsync()) throw new Error('Audio sharing is unavailable on this phone.'); await Sharing.shareAsync(lesson.uri); } catch (e) { setError(e instanceof Error ? e.message : 'Export failed.'); } })(); }} /><Action label="Delete local" kind="quiet" disabled={disabled} onPress={() => Alert.alert('Delete from this phone?', 'This removes the local audio. Any shared uploaded copy is unchanged. Export it first if you need a backup.', [{ text: 'Keep recording', style: 'cancel' }, { text: 'Delete local', style: 'destructive', onPress: () => { void nativeRecorder.remove(lesson).catch(e => setError(e instanceof Error ? e.message : 'Deletion failed.')); } }])} /></View>{!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}</View>}
+  </View>;
+}
+function Player({ uri, disabled }: { uri: string; disabled: boolean }) {
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  useEffect(() => { if (disabled) player.pause(); }, [disabled, player]);
+  return <View style={s.player}><Action label={status.playing ? 'Pause playback' : 'Play recording'} symbol={status.playing ? 'Ⅱ' : '▶'} kind="secondary" disabled={disabled || !status.isLoaded} onPress={() => { if (status.playing) player.pause(); else { if (status.didJustFinish || status.currentTime >= status.duration) void player.seekTo(0).then(() => player.play()); else player.play(); } }} /><Text style={s.playerTime}>{formatTime(status.currentTime)} / {formatTime(status.duration)}</Text></View>;
+}
+const s = StyleSheet.create({
+  app: { flex: 1, backgroundColor: colors.light }, header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 22, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.line, backgroundColor: '#fff' },
+  brandMark: { width: 34, height: 36, backgroundColor: '#293e39', borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, brandLetter: { fontFamily: 'Georgia', fontSize: 26, fontWeight: '600', color: '#fff' }, brand: { fontSize: 14, fontWeight: '700', color: colors.ink }, tagline: { fontSize: 10, color: '#7d8c96', marginTop: 4 }, localTag: { flexDirection: 'row', alignItems: 'center', gap: 5 }, greenDot: { width: 5, height: 5, backgroundColor: '#67977e', borderRadius: 3 }, localTagText: { fontSize: 8, color: '#789184', letterSpacing: .7 },
+  content: { padding: 20, paddingTop: 24, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 24 }, eyebrow: { fontSize: 8, color: '#7b8896', letterSpacing: 1.4, fontWeight: '600', marginBottom: 9 }, heading: { fontSize: 29, color: colors.ink, letterSpacing: -1.3, fontWeight: '600' }, subtitle: { fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 23 },
+  card: { backgroundColor: '#fff', padding: 18, borderRadius: 18, borderWidth: 1, borderColor: '#e1e6eb', boxShadow: '0px 4px 15px #202c3809' }, titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }, micTile: { width: 36, height: 38, borderRadius: 11, backgroundColor: '#eff3f0', alignItems: 'center', justifyContent: 'center' }, microLabel: { fontSize: 7, color: '#8994a0', letterSpacing: 1, marginBottom: 3 }, titleInput: { fontSize: 12, color: colors.ink, paddingVertical: 5, minHeight: 32, fontWeight: '600' }, audioBadge: { fontSize: 7, color: '#8b97a4', borderWidth: 1, borderColor: colors.line, borderRadius: 4, paddingHorizontal: 4, paddingVertical: 3 },
+  display: { borderRadius: 13, backgroundColor: '#f7f8fa', borderWidth: 1, borderColor: '#edf0f3', padding: 17, alignItems: 'center' }, stateRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 9 }, statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#9da9b6' }, stateText: { fontSize: 10, color: '#7b8996' }, clock: { fontSize: 55, color: colors.ink, letterSpacing: -2.4, fontWeight: '300', fontVariant: ['tabular-nums'], marginBottom: 13 }, clockFraction: { fontSize: 26, color: '#adb6c0', fontWeight: '300' },
+  waveform: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 70, gap: 3, overflow: 'hidden' }, waveBar: { flex: 1, backgroundColor: '#5c8b79', borderRadius: 3, minWidth: 2 }, playhead: { position: 'absolute', right: 0, top: 2, bottom: 2, width: 1, backgroundColor: '#de7967' }, waveScale: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 9 }, scaleText: { fontSize: 6, color: '#98a2ad', letterSpacing: .7 }, inputHint: { fontSize: 8, color: '#87939d', marginTop: 17, textAlign: 'center' }, controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 20, marginBottom: 14, flexWrap: 'wrap' },
+  action: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 22, minHeight: 48, borderRadius: 30, backgroundColor: colors.red }, actionText: { color: '#fff', fontSize: 12, fontWeight: '600' }, secondary: { borderWidth: 1, borderColor: '#dce2e8', backgroundColor: '#fff' }, quiet: { backgroundColor: 'transparent', paddingHorizontal: 8, paddingVertical: 8, minHeight: 44 }, darkText: { color: '#526b61', fontSize: 11 }, privateNote: { fontSize: 8, color: '#809189', textAlign: 'center' },
+  tipsToggle: { borderTopWidth: 1, borderTopColor: '#edf0f3', marginTop: 18, paddingTop: 12, minHeight: 44, justifyContent: 'center' }, tipsText: { fontSize: 9, color: '#81909c' }, tipsBody: { fontSize: 10, color: '#71808b', lineHeight: 17, marginTop: 8 }, notice: { marginTop: 14, borderRadius: 8, padding: 12, backgroundColor: '#fff5e4', color: '#825d2e', fontSize: 11, lineHeight: 17 }, errorPanel: { backgroundColor: '#fff2ee', padding: 12, borderRadius: 8, marginTop: 14 }, error: { color: '#983f35', fontSize: 11, lineHeight: 18 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, marginBottom: 8 }, sectionTitle: { fontSize: 13, fontWeight: '600', color: '#3b4855' }, count: { color: '#8d9ba6', fontSize: 10 }, empty: { padding: 22, borderWidth: 1, borderColor: '#dce3e8', borderStyle: 'dashed', borderRadius: 13, alignItems: 'center', gap: 8 }, emptyIcon: { fontSize: 25, color: '#94aaa1' }, emptyTitle: { fontSize: 12, fontWeight: '600', color: '#6d7c88' }, emptyCopy: { fontSize: 10, color: '#9aa4ae' },
+  lessonCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e6eb', borderRadius: 12, marginBottom: 8 }, lessonRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, minHeight: 72 }, fileIcon: { width: 32, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eff3f0' }, lessonTitle: { fontSize: 12, fontWeight: '600', color: colors.ink }, lessonMeta: { fontSize: 9, color: '#97a1ab', marginTop: 6 }, lessonDetails: { padding: 12, paddingTop: 0 }, detailActions: { flexDirection: 'row', gap: 12 }, player: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' }, playerTime: { fontSize: 10, color: '#8e9aa5' }, libraryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }, serviceNote: { fontSize: 11, color: '#85949f', lineHeight: 18, marginTop: 18 },
+  bottomNav: { borderTopWidth: 1, borderTopColor: '#e3e7ec', backgroundColor: '#fff', flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 28 }, navItem: { flex: 1, alignItems: 'center', padding: 2, minHeight: 48, gap: 4 }, navIcon: { width: 52, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, navSelected: { backgroundColor: '#edf3ef' }, navText: { fontSize: 9, color: '#8e9ba5', fontWeight: '600' }, libraryIcon: { color: '#7c958b', fontSize: 24 },
+  mic: { width: 18, height: 23, alignItems: 'center' }, micCapsule: { width: 7, height: 13, borderWidth: 1.3, borderColor: '#608373', borderRadius: 5 }, micArc: { position: 'absolute', top: 7, width: 14, height: 11, borderWidth: 1.3, borderTopWidth: 0, borderColor: '#608373', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }, micStem: { width: 1.3, height: 4, backgroundColor: '#608373', position: 'absolute', top: 18 },
+});

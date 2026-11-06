@@ -1,8 +1,8 @@
 # Ben — Mobile Application and Web Frontend Specification
 
-Version 0.4 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.5 · 2026-11-06 · Project name undecided; “Lecture Companion” is a working descriptor.
 
-**Owner:** Ben. **Status:** merged specification; implementation, device verification and application setup have not started. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
+**Owner:** Ben. **Status:** web study foundation, foreground browser recorder and native Expo recorder source implemented. Section 13 records web API alignment and no-paid browser/API verification. Native API integration/installation and physical-device verification remain pending. Sections 11–12 preserve the earlier checkpoints. Companion specs: [Alex — backend/API/model/shared gates](ALEX_BACKEND_SPEC.md) and [Michelle — interface design](MICHELLE_INTERFACE_DESIGN_SPEC.md).
 
 ## 1. Ownership and shared baseline
 
@@ -149,4 +149,73 @@ Follow [Alex’s G0–G6 gates](ALEX_BACKEND_SPEC.md#11-shared-delivery-gates-an
 - [ ] 30-min/60-min and ten-hour device runs, bounded navigation/memory and source-time playback have real evidence before capacity claims.
 - [ ] Michelle’s implemented design preserves required behavior, and live versus fixture/saved examples is unmistakable.
 
-These are planned checks. Record named device/OS/browser/build, source/model/pack versions, actual actions/results and limitations before completion. No frontend build, installation, paid call or device test has been run by this documentation merge.
+These remain acceptance checks. The documentation merge alone ran no frontend/device tests. The subsequent implementation checkpoint below records the narrower local results; no full gate is passed.
+
+## 11. Implementation checkpoint — 4 November 2026
+
+Historical pre-integration checkpoint. The provisional wire/CSRF assumptions below are superseded by section 13 and Alex's implemented contract; they are not current integration instructions.
+
+Ben explicitly requested starting implementation and confirmed Alex’s API is not ready. Ben named iPhone for testing; model/OS and Android device details remain unknown. This session implements the first web slice under `apps/web/`, preserving the full iOS/Android and F1 requirements above. It does not implement Alex’s backend or claim G0/G1 complete.
+
+Implemented: React/TypeScript/Vite bootstrap; operator-supplied laptop address with credentialed requests and no provider-key input; paginated shared library; browse/drop, local playback/title/format/size/duration review; IndexedDB retention of pending upload file/title/key; explicit upload separate from consented processing; persisted processing operation keys; visible job status/errors, foreground polling/backoff and terminal-job polling stop; Notes/Overview/Transcript/Quiz; exact-revision source lookup, transcript pagination and loaded-page search; classifier provenance and outdated/partial/no-quiz states; pack-scoped persisted quiz drafts and immutable attempt history; frozen same-key retries after uncertain submissions; shared deletion confirmation/cache invalidation. Presentation follows Michelle’s neutral/teal exploration defaults and is not her reviewed final design.
+
+Native capture/import, resumable transport, browser recording, transcript editing, regeneration/subject override, explicit solution reveal, audio source seeking, offline study cache, complete coverage/gap presentation and long-session/endurance proof are not implemented in this slice. The web client has original playback but does not claim tested codec support. Browser draft persistence is subject to quota/eviction and does not replace the original file. Acknowledged pending uploads can be cleared locally with an uncertainty warning; this never deletes a possible server copy.
+
+### Alex integration handoff
+
+There is no backend OpenAPI/schema yet. `apps/web/src/api.ts` contains isolated runtime consumption guards derived from sections 4–5 of Alex’s spec, not a new canonical API definition. Replace them and the synthetic test responses with generated types/fixtures from Alex’s single implementation schema when available. The UI fails visibly on incompatible responses instead of silently using sample content.
+
+The prose leaves several wire spellings/shapes incomplete. Current adapter assumptions needing Alex’s agreement are `accepted_mime_types` in config; budget’s decimal-string `total/settled/reserved/uncertain/contingency/available`; override’s `subject`; attempt `results` with `question_id/selected_option_id/correct_option_id/correct/explanation/evidence_segment_ids`; flat artifact status map; transcript `id/segments/next_cursor`; and 202 deletion `{status}`. No production compatibility is asserted. Config languages/features/provider setup, complete coverage/gap rendering and request estimates need integration work before enabling a real demo.
+
+Web transport uses `credentials: include`; the provisional CSRF convention reads `csrftoken` and sends `X-CSRFToken`. Alex must provide the actual operator provisioning/CSRF convention, exact allowed origins/HTTPS behavior, cookie settings and a real access-denial/deletion/retry walkthrough. No login, bearer token field or provider credential workaround was added. Same-origin hosting is preferred; cross-origin access requires explicit server cookie/CORS configuration. Neither CORS nor the UI is access control.
+
+Pending mutation records are scoped to the configured service address. Retries keep the original body and key; deliberate practice creates a new operation. The backend must enforce the stable workspace namespace, semantic multipart digest, deletion checks and atomic spend guard. The frontend never calls a provider or calculates an authoritative grade.
+
+### Verification record
+
+Environment: local macOS host, Node `24.15.0`, npm `11.12.1`. Registry-resolved stable packages pinned exactly with `package-lock.json`: React/React DOM `19.3.1`, Vite `8.3.5`, React plugin `6.2.1`, TypeScript `7.0.2`, Zod `4.6.7`, Vitest `5.1.0`, Playwright `1.64.1`. Expo/React Native were not installed or compatibility-claimed.
+
+- Type checking and production build pass.
+- 11 focused unit tests pass: request headers/access, safe errors, HTTP-200 blocked states, response guards, retry key/body persistence, storage failure, seconds/ten-hour formatting and independent file limits.
+- 8 isolated Google Chrome browser tests pass with synthetic test responses: disconnected start; upload lost-response/reload/key reuse without processing; source revision lookup/transcript paging/provenance; quiz lost-response/reload/locked-payload/practice restoration; partial/outdated/no-quiz; budget-blocked HTTP 200; scoped deletion; 360px reflow. These are frontend tests, not live API, decoding, provider or device evidence. Test fixtures are imported only by tests and are absent from the application build.
+- No paid requests, training, provider keys, API service, native build, physical device/endurance run, Michelle usability signoff or deployment occurred. Remaining gates stay open.
+
+Next integration step: Alex publishes the single implementation schema and provisions a reachable test service; Ben aligns the adapter and runs one short real web upload→transcript→study→server-feedback flow. The early actual-iPhone recorder proof and Android inventory/proof remain G0/G2 work.
+
+## 12. Recording-first checkpoint — 4 November 2026
+
+Ben clarified that the audio recording interface is the priority and requested a modern, compact, user-friendly interface. This supersedes the previous upload-first implementation ordering without removing the existing study features or full-target gates. Recording is now the initial screen, independent of Alex’s API; laptop setup is a secondary action. Michelle’s final review remains pending.
+
+The compact design uses a light neutral surface, editable lesson title, explicit capture status, large tabular timer, actual-input waveform, coral Start action and reachable Pause/Resume plus Stop & save controls. Recorder and Library navigation, local-first copy, inline recovery, playback/import/export and narrowly scoped deletion remain functional. Idle visuals are static; no random waveform is used as capture evidence.
+
+### Browser implementation
+
+`capture.ts` owns recording outside screen lifetimes. The foreground recorder uses MediaRecorder and an actual Web Audio input meter. The timer uses recorded intervals rather than callback counts and excludes user pauses. Microphone access is requested only from Start. Browser audio fragments are written in order to IndexedDB with their container initialization retained; stopping waits for pending writes and stores local metadata before reporting Saved. Startup labels abandoned stored captures as recovered partial, with no promise that a crashed container is playable. Failed writes retain pending fragments in the current page for an explicit retry. Import/export/playback and browser-local deletion are available without provider access. Use for study hands the selected local file to the existing explicit upload path.
+
+Hidden-page capture pauses with visible guidance; interrupted/ended tracks and permission denial have explicit states. AudioContext activation occurs during the user gesture so an audio-meter activation wait cannot leave capture stuck in permission state. An unavailable meter is labeled, and the meter’s state alone is never treated as proof that media capture stopped. Browser storage remains quota/eviction dependent; the normal/maximum-duration and iPhone/Safari evidence is still missing.
+
+### Native implementation
+
+`apps/mobile/` now contains an Expo/React Native recording application with the same recording-first layout, phone safe areas and Record/Library navigation. Its app-level recorder service uses `expo-audio`, actual metering/native recorded duration, pause/resume/stop, app-document audio paths, SQLite metadata, local playback, document import, user-controlled export and phone-local deletion. Metadata checkpoints retain the document URI and observed duration; process-loss recovery is labeled incomplete and does not claim the ≤10-second audio-loss target. There is no silent auto-resume after interruption and no API/provider call in the native recorder.
+
+Background recording is configured in the native plugin/audio mode, but its actual behavior, calls, Bluetooth/input changes, lock screen, disk pressure, pauses, finalization, process termination and recovery require physical testing in a development build. The selected local safety limits retain the 36,000-second and 2,000,000,000-byte targets; they are not measured capacity claims. Native timer/status monitoring plus a native duration request and Android size limit are implemented, but their reliability under suspension is unverified. Native upload/demo-access integration remains pending Alex’s API.
+
+### Setup and evidence
+
+Expo `58.0.23`, React Native `0.88.1`, Audio `58.0.11`, FileSystem `58.0.13`, SQLite `58.0.15`, DocumentPicker `58.0.4`, Sharing `58.0.22`, Crypto `58.0.7`, DevClient `58.0.18` and SafeAreaContext `5.11.1` are pinned from the SDK’s compatible package set. React/React DOM are aligned to the SDK’s `19.3.0` across the workspace, with one runtime instance enforced; the earlier web-only `19.3.1` checkpoint is historical. Native TypeScript is `6.0.3` per the Expo starter; web TypeScript remains `7.0.2`. `npm ls react` verifies one deduplicated version. Expo’s local dependency check reports the chosen SDK dependencies up to date (offline mode does not verify remote updates).
+
+Type checks pass for both apps; the web production build passes; Metro/Hermes exports for both iOS and Android pass. The 11 existing unit tests and 13 browser tests pass. The five new recorder browser tests use Chrome’s synthetic media device to exercise real recording APIs: actual playable saved audio; excluded pause time; local persistence across reload; no API requirement; denial/retry/import; service lifetime across views; hidden-page pause and stopping while paused; incomplete-session recovery; and a 390px phone viewport with controls in view and no horizontal overflow. Test images label synthetic microphone input. The existing eight study/browser tests still pass after navigation changes.
+
+No native binary was built, signed, installed or distributed. No actual iPhone/Android microphone, Safari, 30/60-minute recording, ten-hour endurance, measured recovery loss, provider processing, API integration or Michelle usability approval is established. These remain open G0/G2/G4/G5 evidence requirements. The local browser interface is reviewable now; native readiness must be assessed on actual test phones.
+
+## 13. API integration fixes — 6 November 2026
+
+Alex explicitly requested fixing the four PR #3 review findings, then merging and deploying locally. The web adapter now reads the backend's `lecture_csrf` cookie and sends `X-CSRF-Token`, consumes `is_correct` in quiz feedback, and consumes the canonical USD budget fields without a renamed parallel wire schema. Browser fixture responses were updated to the same contract. MIME validation compares normalized container types while preserving the original upload, accepting WebM/Opus and MP4 codec parameters without treating unsupported Ogg as supported. The backend also measures valid browser WebM that omits duration metadata; Alex's spec owns those intake rules.
+
+`npm run test:contract` starts the implemented API in temporary storage using labeled provider doubles and blocks external HTTP. It verifies actual budget/score response consumption, recorder MIME acceptance, an authenticated mutation using the JS adapter's headers, and continued rejection when CSRF is absent. These checks require the pinned backend Python environment. They do not start the production worker or use the demonstration database.
+
+The browser suite includes a real API/worker flow in isolated temporary storage: synthetic microphone recording/export, WebM upload with cookie/CSRF, visible budget, explicit test-provider processing, correct/incorrect/unanswered scoring, and shared deletion. The application has no test backend fallback; doubles are injected only by test harnesses. Browser automation uses a known synthetic WAV input and supports installed Chrome or Playwright Chromium. Native device/maximum-duration/recovery and paid-provider frontend evidence remain separate.
+
+For the built local web deployment, use README's port-5173 preview instructions and the same `127.0.0.1` hostname as the port-8000 API. Operator provisioning remains separate from student flows and provider keys. The local deployment keeps paid providers disabled and preserves existing records and spending.
+
+Verified with Node 24.15.0: both app type checks and web production build pass; 12 frontend unit tests, five actual-backend contract tests and all 14 Chromium browser tests pass. The backend suite reports 57 passed, including the two durationless-WebM cases. The browser/API flow actually decodes its exported synthetic recording and verifies 100% correct, 0% incorrect and 0% unanswered scoring plus deletion. No paid request occurred; the live US$0.071294 ledger and existing study records were not used by these tests.

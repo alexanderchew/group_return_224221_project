@@ -2,7 +2,7 @@
 
 ## Active project and document authority
 
-The active project is the lecture study app, replacing RiftTable AR by explicit user instruction. The user is Alex. Read README.md and the three active owner specs under docs/specs/ before changing work:
+The active project is the lecture study app, replacing RiftTable AR by explicit user instruction. Owner roles are Alex (backend), Ben (frontend) and Michelle (design); honor the current user’s stated identity rather than assuming every chat is Alex. Read README.md and the three active owner specs under docs/specs/ before changing work:
 
 - ALEX_BACKEND_SPEC.md owns shared requirements/defaults, the single API/data contract, model/training/inference, local operations/budget/keys, delivery gates, open decisions and evidence status.
 - BEN_FRONTEND_SPEC.md owns functional iPhone/iOS, Android and web behavior and integration against Alex’s contract.
@@ -19,6 +19,14 @@ The user subsequently explicitly instructed: “start implementing my backend pa
 The follow-up instruction authorizes fixing answer-position bias and inline overview IDs, then verifying offline with no more paid API calls. Preserve historical scored packs/attempts and raw provider checkpoints; shuffle/relabel only before a new pack is published. Saved-output replay is labeled offline and does not count as a fresh provider run. Tests block external HTTP. Do not extract in-memory provider keys to restart the server.
 
 The subsequent direct instruction “merge and deploy” authorizes committing the backend/fixes, merging into local main, publishing to the configured GitHub origin and restarting the existing laptop service. Preserve unrelated work, local data, accounting and historical packs. This is a local deployment, not public/cloud hosting or permission for another paid test. Restart through the terminal launcher; Alex re-enters ephemeral provider keys privately if needed.
+
+On 4 November 2026, Ben identified himself and requested starting implementation. This authorizes the frontend source/dependency bootstrap under `apps/web/` and its local verification. Alex’s API is not ready, per Ben. The first frontend checkpoint and unresolved integration assumptions are in Ben’s spec section 11. No backend implementation, paid provider work, model training, public deployment or publication of the frontend is implied. Earlier documentation-only checkout descriptions above describe the prior state.
+
+Ben subsequently prioritized the audio recording interface and requested a modern, compact, user-friendly design. This authorizes recording-first work in `apps/web/` and the native Expo frontend in `apps/mobile/`, with local dependencies and validation. The current evidence is in Ben’s spec section 12. Native source/bundle export is not installation, physical-device verification, measured recovery/endurance or release approval.
+
+Ben then explicitly requested creating a pull request and merging this frontend. Commit/branch publication, PR creation and normal merging are authorized. Preserve branch protection and required checks; this does not authorize application deployment or passing unverified device gates.
+
+Alex subsequently explicitly requested fixing PR #3's CSRF, recorder MIME, quiz-result and budget integration issues, then merging and deploying. This authorizes the PR-branch corrections, regression/real-API tests with labeled provider doubles, the related durationless WebM intake correction, publication and local web/API deployment. Preserve local study data/accounting and immutable source archives. Keep paid providers disabled and make no new paid request. This does not establish native installation or phone/endurance gates. Any required administrator override remains a separate explicit decision.
 
 ## Engineering and reporting rules
 
