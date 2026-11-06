@@ -2,17 +2,17 @@
 
 Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials; the team trains a TensorFlow/Keras subject classifier.
 
-**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. Native API integration/installation, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed.
+**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. The Android interface launches in native Expo Go and Record/Library navigation is verified in an emulator. Native API integration, standalone builds, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed.
 
 ## Screenshots
 
 Captured locally on 6 November 2026. The website and API images show the running laptop services; no provider request was made for these screenshots.
 
-| Website — recording screen | Mobile app — interface preview |
+| Website — recording screen | Mobile app — Android emulator |
 | --- | --- |
-| <img src="docs/screenshots/web-app.jpg" alt="Lecture Companion website with recording controls and local recording library" width="720"> | <img src="docs/screenshots/mobile-interface-preview.jpg" alt="Expo mobile interface browser preview with capture disabled, recording controls and bottom navigation" width="260"> |
+| <img src="docs/screenshots/web-app.jpg" alt="Lecture Companion website with recording controls and local recording library" width="720"> | <img src="docs/screenshots/mobile-android-emulator.png" alt="Lecture Companion native app running in Expo Go on an Android 16 ARM64 emulator, showing the recorder and bottom navigation" width="260"> |
 
-The mobile image renders the existing Expo [`App.tsx`](apps/mobile/App.tsx) through React Native Web at 390 × 844. Native capture, storage and device services were disabled in this screenshot-only preview. It is not an installed iPhone/Android app screenshot; native device verification remains pending.
+The mobile image is an unmodified screenshot from the running Expo [`App.tsx`](apps/mobile/App.tsx) in **Expo Go 58.0.5 on an Android 16 / API 36 ARM64 emulator** (Pixel 6 profile, 1080 × 2400). The real native modules are loaded; Record → Library → Record navigation and the empty local library were checked. Expo Go's floating developer-tools button is visible. This verifies native launch and navigation; standalone development builds, iOS, physical microphones, background capture, endurance and native backend integration remain unverified. See [Ben's native emulator evidence](docs/specs/BEN_FRONTEND_SPEC.md#14-native-android-emulator-checkpoint--6-november-2026).
 
 **Backend API — live Swagger documentation**
 
@@ -79,7 +79,7 @@ This targets the deployed frontend and starts a disposable test API on a separat
 
 Other verification commands are `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run test:contract`, `.venv/bin/pytest -q`, and `npm run test:browser` for the full browser suite. Contract/browser API tests require the backend `.venv`, or `LECTURE_TEST_PYTHON` pointing to that environment. Google Chrome is the browser-suite default; set `PLAYWRIGHT_CHANNEL=chromium` for Playwright’s installed Chromium.
 
-The native iPhone/Android source is in `apps/mobile/`; start its development server with `npm run mobile`. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after platform tooling/device provisioning. Native installation, actual phone microphones, Safari, long-session/endurance and recovery guarantees remain unverified. See [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026).
+The native iPhone/Android source is in `apps/mobile/`; start its development server with `npm run mobile`. With an Android emulator running and its SDK tools on PATH, `npm run start --workspace apps/mobile -- --go --localhost --android` opens the app in the matching native Expo Go client. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after platform tooling/device provisioning. Standalone native builds, iOS installation, actual phone microphones, Safari, long-session/endurance and recovery guarantees remain unverified. See [Ben’s emulator checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#14-native-android-emulator-checkpoint--6-november-2026).
 
 The active specification set has three owners:
 
