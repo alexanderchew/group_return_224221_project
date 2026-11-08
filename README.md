@@ -95,6 +95,14 @@ The merged contract uses `/api/v1/recordings`, `/config`, `StudyPack` and second
 
 [AGENTS.md](AGENTS.md) defines working rules. The [premerge source archive](docs/planning/archive/lecture-companion-premerge-2026-11-04/MERGE_SOURCES.md) preserves both document sets; the [RiftTable archive](docs/planning/archive/rifttable-ar-2026-11-04/ARCHIVE.md) remains historical. The previously deleted StudySmart notebook is not restored. Archived plans/APIs/instructions are not active authority.
 
+## Contributing and merging
+
+Use a branch and pull request for changes to `main`, run the relevant checks, and merge the exact reviewed head commit. Ordinary eligible merges use `gh pr merge <PR_NUMBER> --merge --match-head-commit <FULL_HEAD_SHA>`; no administrator override is part of the normal workflow.
+
+The active default-branch rules require a pull request, block force pushes and prevent branch deletion. The former **Restrict updates** rule forced even eligible PRs through an administrator bypass; it is removed from the normal policy. The administrator bypass remains limited to pull requests, and any exceptional bypass still needs separate explicit user authorization. Do not disable protections or add `--admin` automatically when a PR is blocked. [Alex's merge-policy section](docs/specs/ALEX_BACKEND_SPEC.md#github-merge-policy--8-november-2026) owns the audit and operating details.
+
+GitHub currently requires zero approving reviews and has no required CI status checks. Run and inspect the relevant local tests before merging; those tests are not automatically enforced by GitHub. Alex is currently the only listed human collaborator with write/admin access. Revisit the merge-access policy before granting other collaborators write access, because a writer can normally merge an eligible PR under this policy.
+
 ## Backend details
 
 Backend versions are pinned in `pyproject.toml` and `uv.lock`; frontend versions are pinned in `package-lock.json`. The local data directory is `var/demo/`, including audio, SQLite state and content-free spending records. Local data, provider keys, app-access provisioning, dependency directories and generated builds are excluded from Git. Restarting or deleting study data does not reset spending.

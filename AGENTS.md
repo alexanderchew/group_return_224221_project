@@ -28,6 +28,8 @@ Ben then explicitly requested creating a pull request and merging this frontend.
 
 Alex subsequently explicitly requested fixing PR #3's CSRF, recorder MIME, quiz-result and budget integration issues, then merging and deploying. This authorizes the PR-branch corrections, regression/real-API tests with labeled provider doubles, the related durationless WebM intake correction, publication and local web/API deployment. Preserve local study data/accounting and immutable source archives. Keep paid providers disabled and make no new paid request. This does not establish native installation or phone/endurance gates. Any required administrator override remains a separate explicit decision.
 
+Alex subsequently explicitly requested diagnosing and fixing the recurring PR merge block. This authorizes the narrow repository-ruleset correction removing the redundant `update` restriction, related merge-workflow documentation and a real normal PR merge to verify the fix. Preserve the active pull-request requirement, force-push/deletion protection, PR-only administrator bypass and collaborator permissions. Normal eligible merges of user-authorized work do not need an administrator exception; any actual bypass of remaining requirements still requires separate explicit user authorization. Current zero required reviews and no required CI checks are not evidence that local tests ran. Revisit merge-access expectations before adding writers; do not promise that a ruleset's display name permanently limits merging to Alex.
+
 ## Engineering and reporting rules
 
 - Distinguish direct user/meeting requirements, selected engineering merge defaults, optional expansion and verified results. Current explicit user decisions override earlier source drafts.
