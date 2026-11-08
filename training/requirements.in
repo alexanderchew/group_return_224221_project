@@ -1,0 +1,10 @@
+# Resolve compatible stable packages, then use requirements.txt for exact installs.
+tensorflow==2.21.0
+keras==3.15.1
+numpy
+scikit-learn==1.9.1
+matplotlib==3.11.2
+pytest==9.2.0
+nbformat==5.11.1
+nbclient==0.11.0
+ipykernel==7.4.0
