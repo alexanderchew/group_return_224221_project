@@ -463,3 +463,27 @@ def test_expired_upload_rejects_completion_and_parts(backend):
     assert client.get('/api/v1/uploads/' + value['id']).status_code == 410
     assert client.post('/api/v1/uploads/' + value['id'] + '/complete', headers=operation_key()).status_code == 410
     assert client.put(f"/api/v1/uploads/{value['id']}/files/part/parts/0", content=raw, headers={'X-Part-SHA256': sha}).status_code == 410
+
+
+@pytest.mark.parametrize('limit,expected_status', [(3600, 201), (0.1, 422)])
+def test_browser_webm_without_duration_metadata(backend, tmp_path, limit, expected_status):
+    import subprocess
+    client, app, providers = backend
+    source, webm = tmp_path / 'source.wav', tmp_path / 'browser.webm'
+    source.write_bytes(wav_bytes(0.5))
+    subprocess.run(['ffmpeg', '-v', 'error', '-nostdin', '-i', str(source), '-c:a', 'libopus',
+                    '-f', 'webm', '-live', '1', '-y', str(webm)], check=True)
+    info = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-show_format', '-of', 'json', str(webm)]))
+    assert 'duration' not in info['format']  # Like actual Chrome MediaRecorder output.
+    app.state.settings.max_duration_seconds = limit
+    data = webm.read_bytes()
+    response = client.post('/api/v1/recordings', data={'source': 'web'}, headers=operation_key(),
+                           files={'file': ('browser.webm', data, 'audio/webm;codecs=opus')})
+    assert response.status_code == expected_status, response.text
+    if expected_status == 201:
+        assert response.json()['mime_type'] == 'audio/webm'
+        assert response.json()['duration_seconds'] == pytest.approx(0.5, abs=0.03)
+        assert client.get('/api/v1/recordings/' + response.json()['id'] + '/audio').content == data
+    else:
+        assert response.json()['error']['code'] == 'duration_limit'
+    assert providers.transcriptions == providers.generations == 0

@@ -1,25 +1,86 @@
 # Lecture Companion
 
-Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials; the team trains a TensorFlow/Keras subject classifier.
+Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials. Two independent TensorFlow/Keras neural networks for subject and language recognition are implemented in [`training/`](training/).
 
-**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** Generated frontend types and an offline real-HTTP web/backend walkthrough are verified. Native installation, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; the new web check replays saved output and makes no paid calls.
+**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. The Android interface launches in native Expo Go and Record/Library navigation is verified in an emulator. Native API integration, standalone builds, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed. **The Mathematics and science subject CNN has been tested in an offline browser pilot.** See [the trained model and setup instructions](#run-the-mathematics-and-science-model).
 
-To run the frontend with Node 24:
+## Screenshots
+
+Captured locally on 6 November 2026. The website and API images show the running laptop services; no provider request was made for these screenshots.
+
+| Website — recording screen | Mobile app — Android emulator |
+| --- | --- |
+| <img src="docs/screenshots/web-app.jpg" alt="Lecture Companion website with recording controls and local recording library" width="720"> | <img src="docs/screenshots/mobile-android-emulator.png" alt="Lecture Companion native app running in Expo Go on an Android 16 ARM64 emulator, showing the recorder and bottom navigation" width="260"> |
+
+The mobile image is an unmodified screenshot from the running Expo [`App.tsx`](apps/mobile/App.tsx) in **Expo Go 58.0.5 on an Android 16 / API 36 ARM64 emulator** (Pixel 6 profile, 1080 × 2400). The real native modules are loaded; Record → Library → Record navigation and the empty local library were checked. Expo Go's floating developer-tools button is visible. This verifies native launch and navigation; standalone development builds, iOS, physical microphones, background capture, endurance and native backend integration remain unverified. See [Ben's native emulator evidence](docs/specs/BEN_FRONTEND_SPEC.md#14-native-android-emulator-checkpoint--6-november-2026).
+
+**Backend API — live Swagger documentation**
+
+![Lecture Companion FastAPI documentation showing health, configuration, budget and recording endpoints](docs/screenshots/api-docs.jpg)
+
+## Run locally
+
+The frontend is **[http://127.0.0.1:5173/](http://127.0.0.1:5173/)**. The API documentation is [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Both services run on Alex’s laptop; they are available while their server terminals are running.
+
+Use Node 24, Python 3.13, `uv`, and FFmpeg/ffprobe on your PATH. From the repository root, install the pinned dependencies once:
 
 ```sh
+uv sync --frozen
 npm ci
-npm run dev
 ```
 
-For local API integration, start Alex’s launcher separately and keep the frontend’s own address in **Connect laptop**. Select **Set up browser access**, enter the separate demo connection code, then return and connect. Vite proxies `/api/v1` and `/operator` to loopback port 8000 while preserving the browser host, so access/CSRF cookies stay on one origin. This development proxy is not a production hosting setup.
+**Terminal 1 — start the backend without paid providers:**
 
-Generate/check client types with `npm run generate:client` / `npm run check:client`; the source remains `fixtures/contracts/openapi.json`. `npm run test:integration` starts isolated real HTTP APIs, workers and Chrome, with external provider HTTP blocked. The complete study flow uses visibly labeled saved-output replay and a silent placeholder; a second check uploads fresh synthetic-microphone WebM to the actual decoder. These tests never use or reset Alex’s live data/budget.
+```sh
+env -u ELEVENLABS_API_KEY -u OPENAI_API_KEY ./scripts/start_demo.command --no-prompt
+```
 
-Open the localhost address printed by Vite. The recorder opens first and works without the API: Start, real input meter, Pause/Resume, Stop/save, local playback, import/export and browser-local recordings. Use HTTPS or localhost and allow microphone access. Keep the page visible: switching apps or locking a phone can interrupt browser capture. Export important audio; browser storage can be evicted. The separate Study library retains the upload, processing and study/quiz flow, verified against the local API with explicitly labeled offline replay; fresh-provider frontend verification remains pending. There is no built-in fake backend or provider-key input.
+Leave this terminal running. It prints a **demo connection code** for browser access. This command clears inherited provider keys, makes no paid startup request, and retains the existing database and shared US$20 spending ledger under `var/demo/`.
 
-The native iPhone/Android app is in `apps/mobile/`. Start its development server with `npm run mobile`. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after installing the corresponding platform tooling and provisioning the test device. The iOS project and CocoaPods dependencies are generated; device installation is still blocked by local signing/Developer Mode setup. See Ben’s section 14 for current evidence. Background recording configuration requires a development build; an exported JavaScript bundle or browser preview does not prove native capture works.
+**Terminal 2 — build and start the frontend:**
 
-Validation commands: `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run build`, `npm run test:browser`, and `npm run export:mobile`. Browser tests use isolated Google Chrome profiles with synthetic microphone input and synthetic API responses. They check actual browser recording/playback but do not prove real microphones, Safari, native devices, providers or long-session behavior. See [Ben’s recorder checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#12-recording-first-checkpoint--4-november-2026).
+```sh
+npm run build
+npm run preview --workspace apps/web -- --port 5173 --strictPort
+```
+
+Leave this terminal running and open **[the frontend](http://127.0.0.1:5173/)**. For development, `npm run dev` also serves the app on port 5173. Run these commands from the same checkout as Terminal 1. Stop a service with Ctrl+C in its terminal; restart it if the browser reports “connection refused.” If port 5173 is already serving this app, use that instance rather than starting a second one.
+
+### Connect this browser to the backend
+
+1. In [the frontend](http://127.0.0.1:5173/), open **Connect laptop** and keep the frontend address. Select **Set up browser access** and enter the **demo connection code** printed by Terminal 1.
+2. Return to **Connect laptop** and select **Connect**. Confirm that **Study library** shows the uploaded lectures and demo allowance.
+
+The local Vite proxy forwards `/api/v1` and `/operator` to the loopback API while preserving the browser host so access and CSRF cookies share one origin. Direct access also works for the documented loopback pair: open [port-8000 browser access setup](http://127.0.0.1:8000/operator/connect), then enter `http://127.0.0.1:8000` in **Connect laptop**. Use the same `127.0.0.1` hostname in both tabs. Phone access needs trusted LAN/HTTPS configuration.
+
+### Record, upload, and study
+
+The **Record** screen works without the API. Allow microphone access when you choose **Start recording**, use Pause/Resume as needed, then select **Stop & save**. Open the saved recording for playback/export. Browser capture is foreground-only: keep the page visible and export important audio because browser storage can be evicted.
+
+To upload, select **Use for study**, review the file/title, acknowledge the shared-library scope and select **Upload to shared library**. Uploading does not start a paid request. Every authorized demo browser sees the same uploaded library.
+
+With paid providers disabled, selecting **Process lecture** safely blocks at the missing-provider stage; fresh transcription, notes and quiz generation cannot run live. Existing generated lectures remain readable and their quizzes can still be scored locally for free. The saved **Live E2E — synthetic photosynthesis narration** is a previously generated example, not a new provider result.
+
+For an explicitly authorized live provider run, stop Terminal 1 and run `./scripts/start_demo.command`, entering keys privately at its hidden prompts. Merely starting the server does not spend money; processing uses the persistent shared allowance. Do not enter provider keys in the frontend, README, chat or `.env` files.
+
+### Test the complete flow with zero paid calls
+
+The automated flow uses a synthetic WAV microphone, real browser recording/export/upload, and the actual API/worker with **labeled test providers in temporary storage**. It verifies budget display, correct/incorrect/unanswered quiz scoring and deletion. External provider HTTP is blocked. It does not switch the deployed backend to fake providers or use its real study database.
+
+With the frontend already running on port 5173, run:
+
+```sh
+npx playwright install chromium
+LECTURE_WEB_TEST_URL=http://127.0.0.1:5173 PLAYWRIGHT_CHANNEL=chromium npm run test:browser --workspace apps/web -- --grep 'recorded WebM'
+```
+
+This targets the deployed frontend and starts a disposable test API on a separate localhost port; its private test browser connects to that API. Your normal browser remains connected to port 8000. `PLAYWRIGHT_BROWSERS_PATH` may select an existing project-local browser installation. Omit `LECTURE_WEB_TEST_URL` to test against the automatically started development server on port 4173.
+
+Use `npm run generate:client` after updating the canonical OpenAPI fixture and `npm run check:client` to check generated files. `npm run test:integration` verifies same-origin provisioning, a labeled saved-output replay and a key-free WebM upload using isolated HTTP services.
+
+Other verification commands are `npm run typecheck`, `npm run typecheck:mobile`, `npm test`, `npm run test:contract`, `.venv/bin/pytest -q`, and `npm run test:browser` for the full browser suite. Contract/browser API tests require the backend `.venv`, or `LECTURE_TEST_PYTHON` pointing to that environment. Google Chrome is the browser-suite default; set `PLAYWRIGHT_CHANNEL=chromium` for Playwright’s installed Chromium.
+
+The native iPhone/Android source is in `apps/mobile/`; start its development server with `npm run mobile`. With an Android emulator running and its SDK tools on PATH, `npm run start --workspace apps/mobile -- --go --localhost --android` opens the app in the matching native Expo Go client. Local development builds use `npm run ios --workspace apps/mobile` or `npm run android --workspace apps/mobile` after platform tooling/device provisioning. Standalone native builds, iOS installation, actual phone microphones, Safari, long-session/endurance and recovery guarantees remain unverified. See [Ben’s emulator checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#14-native-android-emulator-checkpoint--6-november-2026).
 
 The active specification set has three owners:
 
@@ -35,25 +96,21 @@ The merged contract uses `/api/v1/recordings`, `/config`, `StudyPack` and second
 
 [AGENTS.md](AGENTS.md) defines working rules. The [premerge source archive](docs/planning/archive/lecture-companion-premerge-2026-11-04/MERGE_SOURCES.md) preserves both document sets; the [RiftTable archive](docs/planning/archive/rifttable-ar-2026-11-04/ARCHIVE.md) remains historical. The previously deleted StudySmart notebook is not restored. Archived plans/APIs/instructions are not active authority.
 
-## Run Alex’s backend locally
+## Contributing and merging
 
-Dependencies are pinned in `pyproject.toml` and `uv.lock`. Alex verified a Python 3.13 `.venv`, FFmpeg and the pinned dependencies on his laptop; other checkouts need their own environment setup. To reproduce the environment, use `uv sync --frozen`.
+Use a branch and pull request for changes to `main`, run the relevant checks, and merge the exact reviewed head commit. Ordinary eligible merges use `gh pr merge <PR_NUMBER> --merge --match-head-commit <FULL_HEAD_SHA>`; no administrator override is part of the normal workflow.
 
-```sh
-./scripts/start_demo.command
-```
+The active default-branch rules require a pull request, block force pushes and prevent branch deletion. The former **Restrict updates** rule forced even eligible PRs through an administrator bypass; it is removed from the normal policy. The administrator bypass remains limited to pull requests, and any exceptional bypass still needs separate explicit user authorization. Do not disable protections or add `--admin` automatically when a PR is blocked. [Alex's merge-policy section](docs/specs/ALEX_BACKEND_SPEC.md#github-merge-policy--8-november-2026) owns the audit and operating details.
 
-The terminal prompts privately for ElevenLabs/OpenAI keys; Enter leaves a provider disabled. Provider keys stay in process memory/environment and are not saved to `.env` or sent to clients. Startup does not make a paid provider request. For a key-free local run:
+GitHub currently requires zero approving reviews and has no required CI status checks. Run and inspect the relevant local tests before merging; those tests are not automatically enforced by GitHub. Alex is currently the only listed human collaborator with write/admin access. Revisit the merge-access policy before granting other collaborators write access, because a writer can normally merge an eligible PR under this policy.
 
-```sh
-./scripts/start_demo.command --no-prompt
-```
+## Backend details
 
-Open [API documentation](http://127.0.0.1:8000/docs). The terminal displays a **demo connection code**, distinct from your provider keys. Use Swagger’s **Authorize** button with that code, or open [browser access setup](http://127.0.0.1:8000/operator/connect). Cookie-authenticated mutations also require `X-CSRF-Token` matching the `lecture_csrf` cookie. Every authorized client shares the uploaded demo library.
+Backend versions are pinned in `pyproject.toml` and `uv.lock`; frontend versions are pinned in `package-lock.json`. The local data directory is `var/demo/`, including audio, SQLite state and content-free spending records. Local data, provider keys, app-access provisioning, dependency directories and generated builds are excluded from Git. Restarting or deleting study data does not reset spending.
 
-Local data and content-free spending records stay under the ignored, private `var/demo/` directory. Stop with Ctrl+C in the server terminal. To add provider keys to an already-running key-free server, stop it and restart the normal launcher. For phone access, explicitly bind to your laptop’s trusted LAN IP with `--host <laptop-LAN-IP>`; the default localhost binding is laptop-only.
+The active verified backend intake limit is **60 minutes and 128 MiB**. Ten hours/2 GB remain full targets and are shown separately in `/config` as `prototype_limited`. WAV, MP3, M4A/AAC and WebM/Opus are supported; browser WebM without duration metadata is measured by a bounded local decode. There is no verified ten-hour/device endurance claim. The subject model can be loaded by an API instance with the pinned TensorFlow/Keras runtime and an explicit `LECTURE_MODEL_DIR`. The standard launcher defaults to an unconfigured subject model.
 
-The initial verified intake envelope is **60 minutes and 128 MiB**, with ten hours/2 GB retained as the full target. WAV, MP3, M4A/AAC and WebM/Opus are decoded/normalized server-side. `/config` reports active and target limits and `prototype_limited`; no ten-hour/device/provider claim is inferred from synthetic intake tests. Missing provider keys yield a persisted blocked job. A compatible optional TensorFlow bundle can be connected later; missing artifacts stay explicitly unavailable.
+Backend checks and contract export:
 
 ```sh
 .venv/bin/pytest -q
@@ -61,7 +118,73 @@ The initial verified intake envelope is **60 minutes and 128 MiB**, with ten hou
 .venv/bin/python scripts/export_contract.py
 ```
 
-The generated [OpenAPI contract](fixtures/contracts/openapi.json) comes from the implementation. Detailed setup/behavior/evidence and outstanding limitations remain in [Alex’s spec](docs/specs/ALEX_BACKEND_SPEC.md#14-backend-implementation-and-local-operation); it is the only active backend plan. Implementation lives under `services/api/lecture_backend/`, with meaningful tests under `tests/`. Real API keys, media, local state and `.venv` are excluded from Git. The subsequent merge/deploy instruction authorizes publishing this backend to GitHub main and restarting the local laptop service, with no additional paid processing.
+The generated [OpenAPI contract](fixtures/contracts/openapi.json) comes from the implementation. [Alex’s spec](docs/specs/ALEX_BACKEND_SPEC.md#14-backend-implementation-and-local-operation) owns backend behavior/limits; [Ben’s integration checkpoint](docs/specs/BEN_FRONTEND_SPEC.md#13-api-integration-fixes--6-november-2026) records web verification. API/worker source is under `services/api/lecture_backend/`. Provider keys are entered only through the launcher and are never saved by default or sent to the frontend.
+
+## Train the subject and language networks
+
+**Implemented on 8 November 2026:** two independent character CNNs, training/evaluation commands and [Lecture_Classifier_Training.ipynb](training/Lecture_Classifier_Training.ipynb) for Colab/Jupyter. Both networks learn from random weights using TensorFlow/Keras. No pretrained embeddings, BERT, fastText or LLM classifier is used. [Alex's training section](docs/specs/ALEX_BACKEND_SPEC.md#9-model-training-evaluation-and-deployment) remains the owner of requirements and evidence.
+
+| Network | Architecture | Output |
+| --- | --- | --- |
+| Subject | Character vocabulary → Embedding → Conv1D → GlobalMaxPooling → Dense → Dropout | Softmax; one subject per instructional section |
+| Language | Separate character vocabulary and CNN with its own weights | Independent sigmoid labels; English/Malay/Chinese can co-occur |
+
+The initial synthetic runs verified training and export. The Mathematics and science subject bundle below was subsequently trained on real lecture transcripts with candidate labels. Independent label review remains pending.
+
+For a new local checkout, create the isolated training environment once (Python 3.13):
+
+```sh
+uv venv --python 3.13 var/training-env
+uv pip sync --python var/training-env/bin/python --require-hashes training/requirements.txt
+var/training-env/bin/python -m training.train templates var/training-data
+mkdir -p var/training-data/transcripts
+```
+
+For local notebook use, select `var/training-env/bin/python` as the kernel interpreter in your Jupyter editor. In a fresh Colab runtime, follow the notebook's repository setup and dependency-install cell first.
+
+Put original-language UTF-8 `.txt` transcripts in `var/training-data/transcripts/`. To create fresh unlabelled annotation drafts, run:
+
+```sh
+var/training-env/bin/python -m training.train prepare var/training-data/transcripts var/training-data/drafts
+```
+
+Review the draft rows yourself: `source_index.json` maps each lecture ID back to its original file for context. Subject sections need `role` and `subject`; language sections need independent `English`, `Malay`, `Chinese` 0/1 labels. Assign `train`, `val`, `test` before training; all derivatives of one source share a `source_family_id` and split. Only instructional sections train the initial subject model. Draft splitting does not determine teaching context or labels. The notebook explains the columns and limitations. If you prepare and label drafts in `var/training-data/drafts/`, set its `DATA_DIR = ROOT / 'var/training-data/drafts'` before running; keep `RUN_MODE='real'`. Keep raw data, unpublished model exports and executed private notebooks under ignored `var/`.
+
+Once reviewed CSVs are ready (choose fresh output directories for every run):
+
+```sh
+var/training-env/bin/python -m training.train validate subject var/training-data/drafts/subject_segments.csv
+var/training-env/bin/python -m training.train train subject var/training-data/drafts/subject_segments.csv --output var/models/subject-run-001
+var/training-env/bin/python -m training.train validate language var/training-data/drafts/language_segments.csv
+var/training-env/bin/python -m training.train train language var/training-data/drafts/language_segments.csv --output var/models/language-run-001
+```
+
+Each export includes `model.keras` with its trained vectorizer, a versioned manifest, validation-selected thresholds, source/split hashes, training history, held-out metrics, a comparison baseline, plots, reload-parity verification and a source snapshot. Subject exports match the existing 1000-character serving interface; language exports are separate and are not connected to the public API yet. All require human review before live deployment. Language scores indicate text presence, not speaking-time percentages or identification of a spoken Chinese variety.
+
+**Verification:** 15 automated training tests pass, and a private synthetic-mode notebook execution trains both default networks, exports them and verifies reload predictions. These are software checks, not real-lecture validation.
+
+Run `var/training-env/bin/python -m pytest training/tests -q -o pythonpath=.` for the training tests. To repeat the **synthetic-only** end-to-end check, use fresh paths with `var/training-env/bin/python -m training.smoke --data-dir var/SYNTHETIC-check-002 --output var/models/SYNTHETIC-check-002 --epochs 8`. These artifacts are marked ineligible for production. Neither command calls ElevenLabs/OpenAI or changes the live demo's data/budget. Use the notebook's `RUN_MODE='real'` for actual reviewed lectures; it blocks on empty/unreviewed CSVs instead of inventing labels.
+
+### Run the Mathematics and science model
+
+The [published bundle](models/subject-mathematics-science/) contains the Keras weights and character vectorizer, the versioned manifest, and aggregate test and serving results. The model scored **157/159 sections** and **25/25 full transcripts** on candidate labels from eight held-out source families. It is marked `production_eligible: false` pending independent review. The output labels are `Mathematics` and `science`.
+
+After setting up the training environment above, classify a UTF-8 transcript locally:
+
+```sh
+var/training-env/bin/python -m training.predict models/subject-mathematics-science path/to/lecture.txt
+```
+
+For an opt-in API instance, complete `uv sync --frozen` first. This command uses the pinned TensorFlow/Keras packages from the training environment and starts a separate demo on port 8001 with both paid providers disabled:
+
+```sh
+training_packages="$(var/training-env/bin/python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+env -u ELEVENLABS_API_KEY -u OPENAI_API_KEY \
+  PYTHONPATH="$training_packages" LECTURE_MODEL_DIR="$PWD/models/subject-mathematics-science" \
+  ./scripts/start_demo.command --no-prompt --port 8001 --data-dir var/subject-model-pilot
+```
+
+In the offline pilot, the browser displayed both accepted predictions as **Student model** and showed feedback after backend scoring. The Mathematics quiz used locally written questions and the science quiz replayed saved output. The standalone command above works directly on text. Processing a fresh audio upload through the API still requires the provider workflow described above. [Pilot evidence and limits](docs/specs/ALEX_BACKEND_SPEC.md#mathematics-and-science-pilot--10-november-2026)
 
 ## First real-provider test
 

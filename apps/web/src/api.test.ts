@@ -111,7 +111,7 @@ describe('media presentation', () => {
     expect(packSchema.safeParse({ ...pack, questions: [question, question] }).success).toBe(false);
     expect(packSchema.safeParse({ ...pack, classification: { ...pack.classification, score: 0.9 } }).success).toBe(false);
   });
-  it.each(['audio/webm;codecs=opus', 'audio/webm; codecs=opus', 'Audio/WebM; codecs="opus"'])('allows recorder MIME parameters: %s', type => {
+  it.each(['audio/webm;codecs=opus', 'audio/webm; codecs=opus', 'Audio/WebM; codecs="opus"', 'audio/mp4; codecs=mp4a.40.2'])('allows recorder MIME parameters: %s', type => {
     expect(validateFile(new File(['audio'], 'lecture.webm', { type }), configSchema.parse(config), null)).toBeNull();
   });
   it('still rejects unsupported containers and size/duration violations with codec parameters', () => {

@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run src",
+    "test:contract": "vitest run tests/backend-contract.test.ts",
     "test:browser": "playwright test",
     "test:integration": "playwright test --config playwright.integration.config.ts",
     "preview": "vite preview --host 127.0.0.1"

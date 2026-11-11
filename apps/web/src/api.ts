@@ -79,7 +79,8 @@ export function connectionUrl(value: string) {
   return url.href.replace(/\/$/, '').replace(/\/api\/v1$/, '');
 }
 function csrfToken() {
-  // Issued by /operator/connect; demo access remains in its HttpOnly cookie.
+  // The readable cookie is paired with the backend's HttpOnly demo-access cookie.
+  // This is a CSRF token, never a provider key.
   const cookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('lecture_csrf='));
   return cookie ? decodeURIComponent(cookie.slice('lecture_csrf='.length)) : '';
 }
@@ -124,7 +125,7 @@ export function duration(value: number | null) {
 export function validateFile(file: File, config: Config, measuredDuration: number | null) {
   if (!file.size) return 'This file is empty. Choose another audio file.';
   if (file.size > config.max_audio_bytes) return 'This file exceeds the active upload size limit. Choose a smaller file.';
-  const mediaType = (type: string) => type.split(';', 1)[0].trim().toLowerCase();
+  const mediaType = (value: string) => value.split(';', 1)[0].trim().toLowerCase();
   if (file.type && !config.accepted_mime_types.some(type => mediaType(type) === mediaType(file.type))) return 'This audio format is not currently supported by the laptop.';
   if (measuredDuration !== null && measuredDuration > config.max_duration_seconds) return 'This file exceeds the active duration limit.';
   return null; // The laptop must decode and validate content, including unknown MIME/duration.

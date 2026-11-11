@@ -38,6 +38,7 @@ test('capture continues across app views, hidden browser pages pause and stop wo
   await page.goto('/'); await page.getByLabel('Recording title').fill('Navigation lesson');
   await page.getByRole('button', { name: 'Start recording', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause recording' })).toBeVisible();
+  await expect.poll(async () => page.locator('.capture-clock').getAttribute('aria-label')).not.toBe('0 seconds recorded');
   await page.getByRole('button', { name: 'Study library', exact: true }).click();
   await page.getByRole('button', { name: 'Record', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause recording' })).toBeVisible();

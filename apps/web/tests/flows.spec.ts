@@ -81,6 +81,7 @@ test('quiz submission survives a lost response, locks answers, restores feedback
     return route.fulfill({ status: 201, json: attempt });
   });
   await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();
+  await expect(page.getByText('Demo allowance: $16.250000 available of $20.000000')).toBeVisible();
   await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByLabel('They vibrate around fixed positions.').check();
   await page.getByRole('button', { name: 'Submit answers' }).click();
