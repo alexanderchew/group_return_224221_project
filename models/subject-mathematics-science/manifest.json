@@ -1,0 +1,62 @@
+{
+  "version": "subject-char-cnn-0a27510f-28768e86-seed42",
+  "task": "subject",
+  "input_schema": "unicode_text_v1",
+  "labels": [
+    "Mathematics",
+    "science"
+  ],
+  "threshold": 0.0,
+  "language_thresholds": null,
+  "window_chars": 1000,
+  "window_overlap": 0,
+  "aggregation": "mean_window_scores",
+  "trained_from_scratch": true,
+  "pretrained_weights": false,
+  "preprocessing": "Original Unicode; Keras lowercase; characters; train-only vocabulary; preserve punctuation",
+  "evidence_status": "user_annotated_lecture_experiment",
+  "production_eligible": false,
+  "label_review": "provided_annotations_not_independently_certified",
+  "dataset_sha256": "0a27510f142bc9e0b8672d56e39b27bdbf2be3d0e17c747a65e9a5d184f2eab4",
+  "split_sha256": "2d8c8e15363fa2fcc1e3e988fa4c730d3897cf47d1be6937647af24335772a24",
+  "trained_roles": [
+    "instruction"
+  ],
+  "seed": 42,
+  "versions": {
+    "tensorflow": "2.21.0",
+    "keras": "3.15.1",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1"
+  },
+  "code_commit": "7c321e7bbd71c8bcc5c237c66ff98df8605968e7",
+  "code_source_sha256": {
+    "__init__.py": "b97de3b248c7fb1201d9235d27644e0eb2d4913746d72586358a9ed351abf0c0",
+    "check_notebook.py": "c9f8b1dfcf7932380ebfd78b7528b78c80a5fbf74fde1a7f40e3838ff869621a",
+    "create_notebook.py": "9d2be3770533f72551b274934b4ed074fe7989d69642e9c1c54b12929db7bc67",
+    "data.py": "f57b8fb0f5e1159f1572a5273504e6eb49791ab76274fb3500893c1dc2885af3",
+    "metrics.py": "c2e3ffa43d26eee8c3b57e5b79f491525e564d5f79dd57da41e65caefb9e1393",
+    "network.py": "f33255db674d16b50dd37f64452545cd24283612f83c1254a14e5e176a9af72f",
+    "predict.py": "de9a62a289cfd43ec6a1f62990530b2e271e6d229bf2dc7876e3db557bb12799",
+    "smoke.py": "4eba239518d6112c8f59fed22419a278bd60e84e637dadeeadcbd600e7814de7",
+    "train.py": "4aea76eee4ef4589532cd2756b95f23c47ddc40ab3559127b90bd7ffd1a46915"
+  },
+  "requirements_sha256": "9b6345a65e32eb744686d015618fec2e62ad1ba77fee25c33cab0625d7fa7fde",
+  "configuration": {
+    "epochs": 30,
+    "batch_size": 16,
+    "embedding_dim": 64,
+    "filters": 128,
+    "dense_units": 64,
+    "max_chars": 1000
+  },
+  "initial_weights_sha256": "e7c4b984cb95e1d64ec24ce323a4f697473bd9f6fe27e6ab459dc2e6c08ec456",
+  "trained_weights_sha256": "28768e86d11581533b9c14cb961217067f50829a5850d74a6d3e804d29a99a18",
+  "model_sha256": "7fe8e07ee5e5c4109837a3ff0df5b6ac34e3fddc945b9f3b5ee578b46738bb55",
+  "limitations": [
+    "No out-of-scope validation",
+    "Scores are not calibrated confidence or speaking-time percentages",
+    "Supporting examples can mislead the baseline subject CNN",
+    "Human review is needed before live deployment"
+  ]
+}
