@@ -57,10 +57,43 @@ small { display: block; font-size: .73rem; font-weight: 400; color: var(--muted)
 .notice p:last-child { margin: 8px 0 0; }
 .notice.error { background: #fff1ee; color: #822f2b; border-color: #d8a6a0; }
 .notice.warning { background: #fff6df; border-color: #d8bd7e; color: #6c501d; }
+.processing-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.processing-status > [role="status"] { flex: 1 1 180px; }
+.processing-orb { width: 136px; text-align: center; }
+.processing-orb button { padding: 6px 8px; font-size: .75rem; }
+.particle-orb {
+  position: relative;
+  height: 104px;
+  background: radial-gradient(ellipse at center, #d9ebe2, transparent 64%);
+}
+.particle-orb canvas { display: block; width: 100%; height: 100%; }
+.particle-orb[data-rendering="false"] canvas { visibility: hidden; }
+.particle-orb[data-rendering="false"]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  color: #26796e;
+  background: currentColor;
+  box-shadow: -27px -5px 0 -0.5px, -20px 13px, -16px -19px 0 -0.5px, -6px 23px 0 -0.5px,
+    6px -23px, 11px 10px 0 -0.5px, 19px -13px, 24px 13px 0 -0.5px, 30px -1px 0 -0.5px;
+}
+.particle-orb.is-ready[data-rendering="false"]::before {
+  color: #a87909;
+  box-shadow: -27px -5px 0 -0.5px #cb3f59, -20px 13px #cf6731, -16px -19px 0 -0.5px #b9448e,
+    -6px 23px 0 -0.5px #3c934f, 6px -23px #794bc3, 11px 10px 0 -0.5px #168e9f,
+    19px -13px #416bd3, 24px 13px 0 -0.5px #3c934f, 30px -1px 0 -0.5px #794bc3;
+}
 .budget { padding: 12px 18px; margin-bottom: 24px; border: 1px solid var(--line); border-radius: 6px; background: white; font-size: .85rem; }
 .budget span { display: block; color: var(--muted); font-size: .75rem; }
 .connection { background: #e8eee8; padding: 24px; border-bottom: 1px solid var(--line); }
 .connection form { max-width: 760px; margin: auto; }
+.connection-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.connection-presets button { padding: 8px 12px; font-size: .85rem; }
+.connection-presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: white; }
 .row { display: flex; gap: 12px; }
 .row input { min-width: 0; }
 .connection p { margin: 12px 0 0; font-size: .85rem; }

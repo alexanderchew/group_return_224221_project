@@ -48,10 +48,12 @@ Leave this terminal running and open **[the frontend](http://127.0.0.1:5173/)**.
 
 ### Connect this browser to the backend
 
-1. In [the frontend](http://127.0.0.1:5173/), open **Connect laptop** and keep the frontend address. Select **Set up browser access** and enter the **demo connection code** printed by Terminal 1.
+1. In [the frontend](http://127.0.0.1:5173/), open **Connect laptop** and choose **This page’s address** for local development. Select **Set up browser access** and enter the **demo connection code** printed by Terminal 1.
 2. Return to **Connect laptop** and select **Connect**. Confirm that **Study library** shows the uploaded lectures and demo allowance.
 
 The local Vite proxy forwards `/api/v1` and `/operator` to the loopback API while preserving the browser host so access and CSRF cookies share one origin. Direct access also works for the documented loopback pair: open [port-8000 browser access setup](http://127.0.0.1:8000/operator/connect), then enter `http://127.0.0.1:8000` in **Connect laptop**. Use the same `127.0.0.1` hostname in both tabs. Phone access needs trusted LAN/HTTPS configuration.
+
+For Alex’s Wi-Fi demo, open the app from the demo host and choose **Alex’s demo laptop**. This preset fills `https://alexanders-laptop.local:8443`. The browser remembers the selected address after **Connect** and uses its access cookie for the current session. Each device needs to trust the demo HTTPS certificate and complete browser access setup when it has no valid session.
 
 ### Record, upload, and study
 

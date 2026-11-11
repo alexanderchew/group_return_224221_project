@@ -31,6 +31,27 @@ test('disconnected start never invents lessons or asks for provider keys', async
   await expect(page.getByRole('button', { name: 'Start recording', exact: true })).toBeEnabled();
   await expect(page.locator('input[type=password]')).toHaveCount(0);
 });
+test('defaults to Alex’s demo preset, opens setup on the selected host, and remembers it', async ({ page }) => {
+  const demo = 'https://alexanders-laptop.local:8443';
+  await page.route(`${demo}/**`, route => route.abort());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect laptop', exact: true }).click();
+  const address = page.getByLabel('Laptop service address');
+  const setup = page.getByRole('link', { name: 'Set up browser access' });
+  await expect(address).toHaveValue(demo);
+  await expect(setup).toHaveAttribute('href', `${demo}/operator/connect`);
+  await page.getByRole('button', { name: 'This page’s address' }).click();
+  await expect(setup).toHaveAttribute('href', 'http://127.0.0.1:4173/operator/connect');
+  await address.fill('https://another-laptop.local:8443/api/v1');
+  await expect(setup).toHaveAttribute('href', 'https://another-laptop.local:8443/operator/connect');
+  await page.getByRole('button', { name: 'Alex’s demo laptop' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your lecture library' })).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Laptop setup', exact: true }).click();
+  await expect(address).toHaveValue(demo);
+  await expect(setup).toHaveAttribute('href', `${demo}/operator/connect`);
+});
 test('web upload stays separate from processing and retains its key/file across a lost response and reload', async ({ page }) => {
   await api(page, false);
   let uploads = 0, jobs = 0;
@@ -118,6 +139,91 @@ test('HTTP 200 blocked jobs preserve saved audio and offer explicit recovery', a
   await expect(page.getByRole('status')).toContainText('allowance reached');
   await expect(page.getByRole('button', { name: 'Retry processing' })).toBeDisabled();
   await expect(page.getByLabel('Original lecture audio')).toBeVisible();
+});
+
+test('a fast new result waits for the processing animation, then keeps the same particle canvas', async ({ page }) => {
+  await api(page);
+  let submitted = false, ready = false;
+  const generating = { ...job, status: 'generating', stage: 'generate_notes', study_pack_id: null, updated_at: '2026-11-04T10:04:59Z' };
+  await page.route('**/api/v1/recordings/test-recording', route => route.fulfill({
+    json: { ...recording, latest_job_id: submitted ? job.id : null },
+  }));
+  await page.route('**/api/v1/recordings/*/study-pack', route => submitted
+    ? route.fulfill({ json: pack })
+    : route.fulfill({ status: 409, json: { error: { code: 'not_ready', message: 'No pack yet.', retryable: false, stage: null } } }));
+  await page.route('**/api/v1/recordings/*/jobs', route => {
+    submitted = true;
+    return route.fulfill({ status: 202, json: generating });
+  });
+  await page.route('**/api/v1/jobs/*', route => route.fulfill({ json: ready ? job : generating }));
+
+  await connect(page);
+  await page.getByRole('button', { name: new RegExp(recording.title) }).click();
+  const orb = page.locator('.particle-orb');
+  await expect(orb).toHaveCount(0);
+  await page.getByLabel('I agree to this processing.').check();
+  const started = Date.now();
+  const published = page.waitForResponse(response => response.url().endsWith('/study-pack') && response.ok());
+  await page.getByRole('button', { name: 'Process lecture' }).click();
+  await published;
+  const pause = page.getByRole('button', { name: 'Pause animation' });
+  await expect(pause).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Preparing study materials');
+  await expect(page.getByRole('heading', { name: 'Your study workspace' })).toHaveCount(0);
+  ready = true;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.getByRole('status')).toContainText('Getting lecture details ready');
+  await expect(page.getByRole('heading', { name: 'Your study workspace' })).toHaveCount(0);
+  const canvas = await orb.locator('canvas').elementHandle();
+  await expect(page.getByRole('status')).toContainText('Lecture details ready', { timeout: 8000 });
+  expect(Date.now() - started).toBeGreaterThanOrEqual(5000);
+  await expect(page.getByRole('heading', { name: 'Your study workspace' })).toBeVisible();
+  await expect(orb).toHaveClass(/is-ready/);
+  expect(await canvas.evaluate(node => node.isConnected)).toBe(true);
+  await expect.poll(async () => {
+    const screenshot = await canvas.screenshot();
+    return page.evaluate(async base64 => {
+      const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+      const image = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+      const copy = new OffscreenCanvas(image.width, image.height).getContext('2d')!;
+      copy.drawImage(image, 0, 0);
+      const { data } = copy.getImageData(0, 0, image.width, image.height);
+      image.close();
+      let warm = 0, cool = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] - data[i + 1] > 20) warm++;
+        if (data[i + 2] - data[i] > 20 && data[i + 2] - data[i + 1] > 10) cool++;
+      }
+      return warm > 3 && cool > 3;
+    }, screenshot.toString('base64'));
+  }).toBe(true);
+  await pause.click();
+  await expect(page.getByRole('button', { name: 'Resume animation' })).toBeVisible();
+});
+
+test('the processing indicator still waits for the server after five seconds with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install();
+  await api(page);
+  let ready = false;
+  await page.route('**/api/v1/jobs/*', route => route.fulfill({
+    json: ready ? job : { ...job, status: 'analysing', stage: 'classify_subject', study_pack_id: null },
+  }));
+  await page.route('**/api/v1/recordings/*/study-pack', route => ready
+    ? route.fulfill({ json: pack })
+    : route.fulfill({ status: 409, json: { error: { code: 'not_ready', message: 'No pack yet.', retryable: false, stage: null } } }));
+
+  await connect(page);
+  await page.getByRole('button', { name: new RegExp(recording.title) }).click();
+  await expect(page.getByRole('status')).toContainText('Identifying the subject');
+  await page.clock.fastForward(6000);
+  await expect(page.getByRole('status')).toContainText('Identifying the subject');
+  await expect(page.locator('.particle-orb canvas')).toHaveCount(0);
+  ready = true;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.getByRole('status')).toContainText('Lecture details ready');
+  await expect(page.locator('.particle-orb.is-ready')).toHaveAttribute('data-rendering', 'false');
+  await expect(page.getByRole('heading', { name: 'Your study workspace' })).toBeVisible();
 });
 test('shared deletion confirms scope, clears cached drafts and keeps the computer original', async ({ page }) => {
   await api(page); await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();

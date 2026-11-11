@@ -21,7 +21,9 @@ async function provision(page: Page, port: number) {
   // /docs is deliberately not proxied: no Swagger CDN requests in offline checks.
   await page.goto(origin);
   await page.getByRole('button', { name: 'Connect laptop', exact: true }).click();
+  await page.getByRole('button', { name: 'This page’s address' }).click();
   await expect(page.getByLabel('Laptop service address')).toHaveValue(origin);
+  await expect(page.getByRole('link', { name: 'Set up browser access' })).toHaveAttribute('href', `${origin}/operator/connect`);
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your lecture library' })).toBeVisible();
   await expect(page.locator('.budget')).toContainText('Settled $0.000000');
@@ -56,6 +58,7 @@ test('real HTTP: access, WAV upload, saved-output job, sources, server scoring/r
   expect(recording.latest_job_id).toBeNull();
   await page.getByLabel('I agree to this processing.').check();
   await page.getByRole('button', { name: 'Process lecture', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Lecture details ready', { timeout: 12_000 });
   await expect(page.getByRole('heading', { name: 'Your study workspace' })).toBeVisible();
   await expect(page.getByText('Previously generated example / offline test output', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'View lecture source' }).first().click();
