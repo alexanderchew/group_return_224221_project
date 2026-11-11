@@ -61,9 +61,11 @@ The **Record** screen works without the API. Allow microphone access when you ch
 
 To upload, select **Use for study**, review the file/title, acknowledge the shared-library scope and select **Upload to shared library**. Uploading does not start a paid request. Every authorized demo browser sees the same uploaded library.
 
+If Alex’s backend restarts while processing, it can continue the same job from saved transcription and generation results. Open the same lecture to see its status. If a paid request may have run without saving its result, processing pauses until Alex checks provider usage.
+
 With paid providers disabled, selecting **Process lecture** safely blocks at the missing-provider stage; fresh transcription, notes and quiz generation cannot run live. Existing generated lectures remain readable and their quizzes can still be scored locally for free. The saved **Live E2E — synthetic photosynthesis narration** is a previously generated example, not a new provider result.
 
-For an explicitly authorized live provider run, stop Terminal 1 and run `./scripts/start_demo.command`, entering keys privately at its hidden prompts. Merely starting the server does not spend money; processing uses the persistent shared allowance. Do not enter provider keys in the frontend, README, chat or `.env` files.
+For an explicitly authorized live provider run, stop Terminal 1 and run `./scripts/start_demo.command`, entering keys privately at its hidden prompts. Previously requested jobs can continue on startup and use the persistent shared allowance. Do not enter provider keys in the frontend, README, chat or `.env` files.
 
 ### Test the complete flow with zero paid calls
 

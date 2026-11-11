@@ -63,20 +63,43 @@ class Worker:
 
     def recover(self):
         expired_uploads = []
+        resume_config = self._resume_config()
         with self.store.tx() as cx:
             for upload in self.store.list(cx, "upload"):
                 if upload["state"] != "completed" and datetime.fromisoformat(upload["expires_at"]) <= datetime.now(UTC):
                     expired_uploads.append(upload["id"])
             cx.execute("UPDATE reservations SET status='uncertain' WHERE status='reserved'")
+            charges = cx.execute(
+                "SELECT DISTINCT job_id,status FROM reservations WHERE status IN ('settled','uncertain')"
+            ).fetchall()
+            uncertain = {row["job_id"] for row in charges if row["status"] == "uncertain"}
+            charged = {row["job_id"] for row in charges}
             for job in self.store.list(cx, "job"):
-                if job["status"] in ACTIVE:
-                    job.update(status="failed", updated_at=now(), error=Problem(
-                        "processing_interrupted", "The server restarted. Saved stages remain available for explicit retry.",
+                previously_started = job["status"] == "queued" and "_resume_config" in job
+                if job["status"] not in ACTIVE and not previously_started:
+                    continue
+                legacy_charge = "_provider_result_pending" not in job and job["id"] in charged
+                if job["id"] in uncertain or job.get("_provider_result_pending") or legacy_charge:
+                    job.update(status="failed", error=Problem(
+                        "provider_submission_unknown",
+                        "A provider result may be missing. Ask Alex to check provider usage before retrying.",
+                        stage=job.get("stage")).payload())
+                elif job.get("_resume_config", resume_config) != resume_config:
+                    job.update(status="failed", error=Problem(
+                        "processing_interrupted", "Processing settings changed. Saved work is available for retry.",
                         retryable=True, stage=job.get("stage")).payload())
-                    self.store.put(cx, "job", job, job["recording_id"])
+                else:
+                    job.update(status="queued", stage=None, error=None, _resume_config=resume_config)
+                job["updated_at"] = now()
+                self.store.put(cx, "job", job, job["recording_id"])
 
         for upload_id in expired_uploads:
             shutil.rmtree(self.settings.data_dir / "uploads" / upload_id, ignore_errors=True)
+
+    def _resume_config(self) -> str:
+        return digest([self.settings.scribe_model, self.settings.chunk_seconds,
+                       self.settings.openai_model, self.settings.generation_chars,
+                       self.settings.output_tokens, PROMPT_VERSION])
 
     def loop(self):
         while not self.stop_event.is_set():
@@ -118,6 +141,8 @@ class Worker:
             if not current or current["status"] == "canceled":
                 raise Problem("deleted", "Canceled work cannot publish results.", 404)
             self.store.put(cx, "checkpoint", {"id": cache_id, "payload": payload, "created_at": now()}, job["recording_id"])
+            current["_provider_result_pending"] = False
+            self.store.put(cx, "job", current, job["recording_id"])
 
     def save_transcript(self, job_id: str, segments: list[dict], covered_end: float, complete: bool):
         job, recording = self.check(job_id)
@@ -148,7 +173,8 @@ class Worker:
             if not queued:
                 return False
             job = queued[0]
-            job.update(status="preparing_audio", stage="validate_media", updated_at=now())
+            job.update(status="preparing_audio", stage="validate_media", updated_at=now(),
+                       _resume_config=self._resume_config(), _provider_result_pending=False)
             self.store.put(cx, "job", job, job["recording_id"])
         try:
             self.process(job["id"])
@@ -191,6 +217,8 @@ class Worker:
                         self.update(job_id, status="preparing_audio", stage="prepare_audio")
                         chunk = work / "chunk.wav"
                         audio_chunk(Path(recording["_audio_path"]), chunk, start, duration)
+                        if self.stop_event.is_set():
+                            return
                         self.check(job_id)
                         self.update(job_id, status="transcribing", stage="transcribe")
                         raw = self.providers.transcribe(chunk, duration, job_id)
@@ -201,9 +229,12 @@ class Worker:
                     segments.extend(chunk_segments)
                     start = min(recording["duration_seconds"], start + duration)
                     revision = self.save_transcript(job_id, list(segments), start, start >= recording["duration_seconds"] - 0.01)
-            self.update(job_id, status="analysing", stage="classify_subject")
-            classification = self.classifier.classify("\n".join(s["text"] for s in revision["segments"]), revision["id"])
             job, _ = self.check(job_id)
+            classification = job.get("_classification")
+            if classification is None:
+                self.update(job_id, status="analysing", stage="classify_subject")
+                classification = self.classifier.classify("\n".join(s["text"] for s in revision["segments"]), revision["id"])
+                self.update(job_id, _classification=classification)
             override = job.get("_subject_override")
             subject = override["subject"] if override else classification["label"]
             groups, group, size = [], [], 0
@@ -226,6 +257,8 @@ class Worker:
                     part = GeneratedPack.model_validate(cached["payload"]["generated"])
                     prov = cached["payload"]["provenance"]
                 else:
+                    if self.stop_event.is_set():
+                        return
                     try:
                         part, prov = self.providers.generate(group, subject, job_id)
                         validate_generated(part, group)

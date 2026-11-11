@@ -192,6 +192,13 @@ class Store:
             reservation_id = uid("cost")
             cx.execute("INSERT INTO reservations VALUES(?,?,?,?,?,?,?)",
                        (reservation_id, provider, job_id, amount, "reserved", canonical(detail), now()))
+            job = self.get(cx, job_id, "job")
+            if job:
+                if job["status"] == "canceled":
+                    raise Problem("deleted", "This work was canceled or removed.", 404)
+                # A settled charge can precede the worker's saved result.
+                job["_provider_result_pending"] = True
+                self.put(cx, "job", job, job["recording_id"])
             return reservation_id
 
     def settle(self, reservation_id: str, status: str = "settled", usage: dict | None = None):
