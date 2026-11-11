@@ -9,7 +9,8 @@
     "ios:device": "expo run:ios --device",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
-    "export": "expo export --platform ios --platform android --max-workers 2"
+    "export": "expo export --platform ios --platform android --max-workers 2",
+    "test": "vitest run tests"
   },
   "dependencies": {
     "expo": "58.0.23",
@@ -22,10 +23,13 @@
     "expo-sqlite": "58.0.15",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-safe-area-context": "5.11.1"
+    "react-native-safe-area-context": "5.11.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
   }
 }

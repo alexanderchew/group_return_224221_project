@@ -26,7 +26,8 @@
     "test:integration": "npm run test:integration --workspace apps/web",
     "mobile": "npm run start --workspace apps/mobile",
     "typecheck:mobile": "npm run typecheck --workspace apps/mobile",
-    "export:mobile": "npm run export --workspace apps/mobile"
+    "export:mobile": "npm run export --workspace apps/mobile",
+    "test:mobile": "npm run test --workspace apps/mobile"
   },
   "dependencies": {
     "react": "19.3.0",

@@ -6,6 +6,7 @@ Never import this module from the production launcher or application.
 import argparse
 import json
 import os
+import secrets
 import sys
 import tempfile
 from pathlib import Path
@@ -66,7 +67,15 @@ def main():
         if args.mode == "replay":
             @app.middleware("http")
             async def seed_saved_transcript(request, call_next):
-                if request.method == "POST" and request.url.path.endswith("/jobs") and request.headers.get("X-CSRF-Token"):
+                token = app.state.store.token()
+                bearer = request.headers.get("Authorization", "")
+                cookie = request.cookies.get("lecture_demo", "")
+                csrf = request.headers.get("X-CSRF-Token", "")
+                test_access = secrets.compare_digest(bearer, f"Bearer {token}") or (
+                    not bearer and secrets.compare_digest(cookie, token) and csrf
+                    and secrets.compare_digest(csrf, request.cookies.get("lecture_csrf", ""))
+                )
+                if request.method == "POST" and request.url.path.endswith("/jobs") and test_access:
                     recording_id = request.url.path.split("/")[-2]
                     store = app.state.store
                     with store.tx() as cx:
@@ -84,7 +93,7 @@ def main():
                             store.put(cx, "recording", rec)
                 return await call_next(request)
         print(f"TEST ONLY: {args.mode}; isolated store; external HTTP blocked.", flush=True)
-        uvicorn.run(app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning")
+        uvicorn.run(app, host="127.0.0.1", port=args.port, access_log=False, log_level="info" if args.port == 0 else "warning")
 
 
 if __name__ == "__main__":
