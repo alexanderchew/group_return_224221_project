@@ -2,7 +2,9 @@ import hashlib
 import json
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from decimal import Decimal
+from time import monotonic, sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -215,15 +217,88 @@ def test_delete_preserves_budget_and_tombstones_idempotency(backend):
     assert app.state.store.path.exists()
 
 
-def test_restart_marks_inflight_cost_and_job_uncertain(backend):
-    client, app, _ = backend
+@pytest.mark.parametrize('charge_state', ['reserved', 'settled', 'legacy_settled'])
+def test_restart_holds_job_when_paid_result_was_not_saved(backend, charge_state):
+    client, app, providers = backend
     rec = upload(client).json()
     job = client.post(f"/api/v1/recordings/{rec['id']}/jobs", json={}, headers=operation_key()).json()
-    app.state.worker.update(job['id'], status='transcribing', stage='transcribe')
-    app.state.store.reserve('test', job['id'], 1000, {})
+    store = app.state.store
+    app.state.worker.update(job['id'], status='transcribing', stage='transcribe', _provider_result_pending=False)
+    reservation = store.reserve('TEST_DOUBLE', job['id'], 1000, {})
+    if charge_state != 'reserved':
+        store.settle(reservation)
+    if charge_state == 'legacy_settled':
+        with store.tx() as cx:
+            legacy_job = store.get(cx, job['id'], 'job')
+            del legacy_job['_provider_result_pending']
+            store.put(cx, 'job', legacy_job, rec['id'])
     app.state.worker.recover()
-    assert client.get('/api/v1/jobs/' + job['id']).json()['error']['code'] == 'processing_interrupted'
-    assert app.state.store.budget()['uncertain_usd'] == '0.001000'
+    result = client.get('/api/v1/jobs/' + job['id']).json()
+    assert result['status'] == 'failed'
+    assert result['error']['code'] == 'provider_submission_unknown'
+    assert result['error']['retryable'] is False
+    ledger_key = 'uncertain_usd' if charge_state == 'reserved' else 'settled_usd'
+    assert store.budget()[ledger_key] == '0.001000'
+    assert app.state.worker.run_once() is False
+    assert providers.transcriptions == providers.generations == 0
+
+
+@pytest.mark.parametrize('prefix', ['stt_', 'gen_'])
+def test_backend_startup_resumes_same_job_after_saved_result(backend, monkeypatch, prefix):
+    client, app, providers = backend
+    settings, store, worker = app.state.settings, app.state.store, app.state.worker
+    settings.chunk_seconds = 0.125
+    settings.generation_chars = 50
+    transcribe, generate = providers.transcribe, providers.generate
+
+    def charged_transcription(path, duration, job_id):
+        reservation = store.reserve('TEST_DOUBLE_STT', job_id, 1000, {})
+        result = transcribe(path, duration, job_id)
+        store.settle(reservation)
+        return result
+
+    def charged_generation(segments, subject, job_id):
+        reservation = store.reserve('TEST_DOUBLE_LLM', job_id, 1000, {})
+        result = generate(segments, subject, job_id)
+        store.settle(reservation)
+        return result
+
+    save_checkpoint = worker.checkpoint
+
+    def interrupt_after_checkpoint(job_id, cache_id, payload):
+        save_checkpoint(job_id, cache_id, payload)
+        if cache_id.startswith(prefix):
+            raise SystemExit('Simulated shutdown after persisting the result')
+
+    monkeypatch.setattr(providers, 'transcribe', charged_transcription)
+    monkeypatch.setattr(providers, 'generate', charged_generation)
+    monkeypatch.setattr(worker, 'checkpoint', interrupt_after_checkpoint)
+    rec = upload(client).json()
+    url = f"/api/v1/recordings/{rec['id']}"
+    job = client.post(url + '/jobs', json={}, headers=operation_key()).json()
+    with pytest.raises(SystemExit, match='after persisting'):
+        worker.run_once()
+    assert (providers.transcriptions, providers.generations) == ((1, 0) if prefix == 'stt_' else (2, 1))
+
+    reopened = create_app(replace(settings, start_worker=True), providers)
+    if prefix == 'gen_':
+        def unexpected_classification(*args):
+            raise AssertionError('Recovery should use the subject already saved for this job.')
+
+        monkeypatch.setattr(reopened.state.worker.classifier, 'classify', unexpected_classification)
+    with TestClient(reopened, headers=client.headers) as restarted:
+        deadline = monotonic() + 5
+        while True:
+            result = restarted.get('/api/v1/jobs/' + job['id']).json()
+            if result['status'] in {'ready', 'failed', 'blocked', 'partial'} or monotonic() >= deadline:
+                break
+            sleep(0.02)
+        assert result['status'] == 'ready', result
+        assert restarted.get(url).json()['latest_job_id'] == job['id']
+        assert restarted.get(url + '/study-pack').json()['id'] == result['study_pack_id']
+    assert providers.transcriptions == providers.generations == 2
+    assert store.budget()['settled_usd'] == '0.004000'
+    assert store.budget()['uncertain_usd'] == '0.000000'
 
 
 def test_metadata_optimistic_concurrency(backend):

@@ -51,7 +51,7 @@ def main():
     print(f"Local API: http://{args.host}:{args.port}/docs")
     print(f"Browser access setup: http://{args.host}:{args.port}/operator/connect")
     print(f"Data stays in: {settings.data_dir}")
-    print("Shared demo budget: US$20 total; no paid request occurs merely by starting.")
+    print("Shared demo budget: US$20 total. Previously requested jobs can resume on startup.")
     print("Provider status:", {k: bool(os.getenv(k)) for k in ("ELEVENLABS_API_KEY", "OPENAI_API_KEY")})
     if not args.quiet_access:
         print("Demo connection code (NOT a provider key):", store.token())
