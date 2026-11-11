@@ -30,7 +30,7 @@ The merged engineering defaults are in Alex’s spec; exact versions are latest 
 
 D0 design supports short real web upload/mobile flows. F1 retains browser foreground recording, normal and maximum durations, transcript corrections/revisions, source-audio navigation, resumable/partial states and model provenance. These are sequenced in [Alex’s shared gates](ALEX_BACKEND_SPEC.md#11-shared-delivery-gates-and-acceptance), not a separate design roadmap.
 
-Outside the baseline: accounts/profiles, payments, public hosting, social/gamification/progress dashboards, flashcards/chatbot, decorative 3D and elaborate animations. Free-text grading, syllabus/topic/dialogue models and export formats need a separate adopted requirement. Do not spend initial design time implying these features exist.
+Outside the baseline: accounts/profiles, payments, public hosting, social/gamification/progress dashboards, flashcards/chatbot, and 3D outside the web processing indicator. Free-text grading, syllabus/topic/dialogue models and export formats need a separate adopted requirement. Do not spend initial design time implying these features exist.
 
 ## 3. Information architecture and principal flows
 
@@ -94,6 +94,8 @@ These are design exploration defaults, not an approved finished identity.
 | States | Default/pressed/focused/disabled/loading/selected/empty/success/warning/error where relevant, preserving semantic roles/callbacks |
 | Motion | Minimal functional feedback; reduced motion respected; waveform animation bounded so capture remains responsive |
 | Branding | Temporary text title/simple mark; no large illustration project before core flow works |
+
+On web, pair the real processing status with a compact orbit of teal particles. On “Lecture details ready,” let the particles continue moving while they blend into a rainbow and slow down. Offer a pause control and use a static indicator for reduced motion or unavailable WebGL. Keep the status and result readable independently of the animation.
 
 Review representative 360, 768 and 1280 logical-pixel widths plus actual phones’ safe areas. Specify one-column narrow layouts, tab overflow, wrapping/buttons, long filenames/titles and reading measure; extra desktop width can show transcript beside notes without making paragraphs too wide. Avoid hover-only controls.
 

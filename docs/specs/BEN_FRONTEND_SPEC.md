@@ -22,6 +22,8 @@ No account login/profile flow. The private demonstration uses one operator-provi
 
 Configure the laptop’s reachable LAN/hotspot base URL; phone localhost is the phone, not Alex’s server. Provision app-access credentials outside normal student flows, separately from provider keys: native secure storage/bearer access, web secure cookie/CSRF as Alex defines. Do not add provider-key entry fields or ship keys in clients. A connection failure has a clear reconnect/settings route without erasing local media. Exact phone/OS/browser/LAN/signing details are recorded at G0.
 
+Web setup defaults to Alex’s demo preset at `https://alexanders-laptop.local:8443` and offers the current page address for local development. The setup link uses the address selected or entered in the form. Connect remembers the address per browser origin. Browser access remains a server-issued session cookie.
+
 Separate native capture, transfer, server job and output freshness:
 
 - Capture: idle, requesting permission, recording, paused, interrupted/error, finalizing, saved/recovered partial.
@@ -93,6 +95,8 @@ Read `/config` capabilities/enabled features, verified active limits, full-targe
 Use Alex’s exact idempotency semantics on upload/job/quiz/revision actions. Retrying unresolved transport uses the same key/body; deliberate new processing/regeneration/attempt uses a new key. Uploading never silently starts paid work. Show byte progress only when actually available; processing uses stage labels, not invented percentages or remaining-time promises.
 
 Poll the current job about every two seconds while relevant/visible, backing off offline/idle; stop polling terminal states and refresh on return. One shared client query/service owns each active poll, not every component. Inspect both HTTP status and Job.status: a failed/partial/blocked job may be HTTP 200. A failed-stage retry asks Alex to reuse completed work; the client never retries providers directly. A different input while a job is active may conflict and requires explicit recovery, not overwriting IDs.
+
+On web, start the processing indicator with the explicit Process action or when opening a lecture with an active job. Reveal a successful new result once five seconds have elapsed and the matching study pack is available. An existing completed lecture opens immediately. Show failed, blocked, canceled, or partial outcomes as received. The API supplies subject information in the study pack. Its output language describes the generated materials.
 
 Show safe estimated next/session cost and settled/reserved/remaining total demo allowance. The US$20 guard is authoritative on the server; clients cannot refill/reset it or bypass via another workspace/key/retry. Use friendly warning/blocked copy, retaining recording/transcript/cached results. Provider-configured booleans can guide setup help, but a settings page must not collect ElevenLabs/OpenAI keys; Alex’s terminal handles them.
 

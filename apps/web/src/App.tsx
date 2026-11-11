@@ -6,20 +6,32 @@ import { clearRecording, operation, read, remove, scopeKey, uploadDraft, write }
 import type { UploadDraft } from './storage';
 import { Study } from './Study';
 import { Icon, Recorder } from './Recorder';
+import { ParticleOrb } from './ParticleOrb';
 
 const stageCopy: Record<string, string> = {
   queued: 'Waiting to process', preparing_audio: 'Preparing audio', transcribing: 'Transcribing your lesson', analysing: 'Identifying the subject',
   generating: 'Preparing study materials', validating: 'Checking lesson references', ready: 'Study materials ready', partial: 'Some materials are available',
   blocked: 'Processing is blocked', failed: 'Processing could not finish', canceled: 'Processing canceled',
 };
+const minimumProcessingMs = 5000;
+const alexDemoAddress = 'https://alexanders-laptop.local:8443';
 export function ErrorNotice({ error }: { error: string }) { return <p className="notice error" role="alert">{error}</p>; }
 export function App() {
   const [base, setBase] = useState(() => read<string>('lecture-companion:host', ''));
-  const [address, setAddress] = useState(base || window.location.origin);
+  const [address, setAddress] = useState(base || alexDemoAddress);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<'record' | 'study'>('record');
   const [initialFile, setInitialFile] = useState<File | null>(null);
+  const pageAddress = window.location.origin;
+  let setupAddress: string | null = null;
+  if (editing) {
+    try { setupAddress = connectionUrl(address); } catch { /* Offer setup once the address is valid. */ }
+  }
+  function chooseAddress(next: string) {
+    setAddress(next);
+    setError('');
+  }
   return <>
     <a className="skip" href="#main">Skip to main content</a>
     <header className="site-header"><a className="brand" href="#" onClick={() => setView('record')}><span className="brand-mark" aria-hidden="true">L</span><span>Lecture Companion<small>Make room for understanding.</small></span></a>
@@ -27,9 +39,19 @@ export function App() {
       <button className="connection-toggle quiet" onClick={() => setEditing(!editing)} aria-expanded={editing}><span className={base ? 'connection-dot configured' : 'connection-dot'} />{base ? 'Laptop setup' : 'Connect laptop'}</button></header>
     {editing && <section className="connection" aria-label="Laptop connection"><form onSubmit={event => {
       event.preventDefault();
-      try { const next = connectionUrl(address); write('lecture-companion:host', next); setBase(next); setEditing(false); setView('study'); setError(''); } catch (e) { setError(message(e)); }
-    }}><label htmlFor="address">Laptop service address</label><div className="row"><input id="address" type="url" placeholder="https://laptop.example" value={address} required onChange={e => setAddress(e.target.value)} /><button>Connect</button></div>
-      <p className="muted">Use the address provided by Alex. For local development, keep this page’s address to use the laptop connection.</p><p><a href={`${base || window.location.origin}/operator/connect`} target="_blank" rel="noreferrer">Set up browser access</a> using the demo connection code from the laptop terminal, then return here and connect. This code is separate from provider keys.</p>{error && <ErrorNotice error={error} />}</form></section>}
+      try { const next = connectionUrl(address); write('lecture-companion:host', next); chooseAddress(next); setBase(next); setEditing(false); setView('study'); } catch (e) { setError(message(e)); }
+    }}>
+      <div className="connection-presets" role="group" aria-label="Laptop address presets">
+        <button className="secondary" type="button" aria-pressed={setupAddress === alexDemoAddress} onClick={() => chooseAddress(alexDemoAddress)}>Alex’s demo laptop</button>
+        {pageAddress !== alexDemoAddress && <button className="secondary" type="button" aria-pressed={setupAddress === pageAddress} onClick={() => chooseAddress(pageAddress)}>This page’s address</button>}
+      </div>
+      <label htmlFor="address">Laptop service address</label>
+      <div className="row"><input id="address" type="url" placeholder="https://laptop.example" value={address} required onChange={e => chooseAddress(e.target.value)} /><button>Connect</button></div>
+      {setupAddress
+        ? <p><a href={`${setupAddress}/operator/connect`} target="_blank" rel="noreferrer">Set up browser access</a> if this browser needs access. Enter the demo connection code there, then return here and connect.</p>
+        : <p className="muted">Enter a valid laptop service address to set up browser access.</p>}
+      {error && <ErrorNotice error={error} />}
+    </form></section>}
     {view === 'record' ? <Recorder onUseFile={file => { setInitialFile(file); setView('study'); if (!base) setEditing(true); }} /> : base ? <Workspace key={base} base={base} initialFile={initialFile} clearInitialFile={() => setInitialFile(null)} /> : <main id="main" className="welcome"><span className="eyebrow">YOUR STUDY SPACE</span><h1>Your lesson, made clearer.</h1><p>Connect to Alex’s laptop to upload a lecture, revisit its transcript, and study with source-linked notes and questions.</p><button onClick={() => setEditing(true)}>Connect laptop</button><div className="notice">Waiting for the laptop service. No audio has been uploaded or processed.</div><p className="muted">The uploaded demo library is shared with every authorized device. Keep a copy of your original audio.</p></main>}
     <footer>Made for the moments worth remembering.<span>Lecture Companion · Local recording, shared study</span></footer>
   </>;
@@ -155,6 +177,15 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
   const pendingScope = scopeKey(api.base, `recording:${recordingId}:process`);
   const [hasPending, setHasPending] = useState(() => read(pendingScope, null) !== null);
   const [deleting, setDeleting] = useState(false);
+  const [processing, setProcessing] = useState<{ startedAt: number; jobId: string | null } | null>(null);
+  const [elapsedFor, setElapsedFor] = useState<number | null>(null);
+  const startedAt = processing?.startedAt;
+  useEffect(() => {
+    if (startedAt === undefined) return;
+    const remaining = Math.ceil(startedAt + minimumProcessingMs - performance.now());
+    const timer = setTimeout(() => setElapsedFor(startedAt), Math.max(0, remaining));
+    return () => clearTimeout(timer);
+  }, [startedAt]);
   useEffect(() => {
     let stopped = false, timer: ReturnType<typeof setTimeout>;
     let inFlight = false;
@@ -179,10 +210,16 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
         if (j && j.recording_id !== recordingId) throw new Error('Processing details do not match this lecture.');
         lastJob = j;
         setJob(j); active = !!j && !terminalStatuses.has(j.status);
+        if (j && active) {
+          const observed = { startedAt: performance.now(), jobId: j.id };
+          setProcessing(run => run && (run.jobId === null || run.jobId === j.id) ? run : observed);
+        }
         try {
           const p = await api.request(`${path}/study-pack`, packSchema);
           if (p.recording_id !== recordingId) throw new Error('Study materials do not match this lecture.');
-          if (!stopped) setPack(p);
+          // A pack can be published between the job read and the pack read.
+          // Keep older materials visible, but wait for the job to confirm its new result.
+          if (!stopped && (!j || !active || Date.parse(p.created_at) < Date.parse(j.updated_at))) setPack(p);
         } catch (e) { if (!(e instanceof ApiError && e.code === 'not_ready')) throw e; }
         if (!stopped) setError('');
         failures = 0;
@@ -203,14 +240,17 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
   async function process() {
     if (guard.current || !consent || !connected) return;
     if (pack && !hasPending && !job?.error && job?.status !== 'partial') return;
+    const startedAt = performance.now();
     guard.current = true; setBusy(true); setError('');
+    setProcessing({ startedAt, jobId: null });
     try {
       const body: JobRequest = job && ['failed', 'blocked', 'partial'].includes(job.status) ? { retry_of_job_id: job.id } : {};
       const pending = operation(pendingScope, body); setHasPending(true);
       const next = await api.json(`${path}/jobs`, pending.body, pending.key, jobSchema);
       if (next.recording_id !== recordingId) throw new Error('Processing details do not match this lecture.');
+      setProcessing({ startedAt, jobId: next.id });
       setJob(next); remove(pendingScope); setHasPending(false); setReload(n => n + 1); onChange();
-    } catch (e) { setError(message(e)); }
+    } catch (e) { setProcessing(null); setError(message(e)); }
     finally { guard.current = false; setBusy(false); }
   }
   async function deleteRecording() {
@@ -224,6 +264,15 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
     finally { guard.current = false; setBusy(false); }
   }
   const active = job && !terminalStatuses.has(job.status);
+  const starting = processing?.jobId === null;
+  const completed = job?.status === 'ready' && processing?.jobId === job.id;
+  const result = completed && pack && pack.id === job.study_pack_id ? pack : null;
+  const reveal = !!result && elapsedFor === startedAt;
+  const showOrb = !error && (starting || !!active || completed);
+  let status = job ? stageCopy[job.status] : null;
+  if (starting) status = 'Starting lecture processing…';
+  else if (reveal) status = 'Lecture details ready';
+  else if (completed) status = result ? 'Getting lecture details ready…' : 'Loading study materials…';
   const canProcess = !active && (!pack || hasPending || !!job && ['partial', 'blocked', 'failed', 'canceled'].includes(job.status));
   return <section aria-label="Lecture detail">
     {recording && <><span className="eyebrow">SAVED IN THE SHARED DEMO LIBRARY</span><h2>{recording.title || 'Untitled lecture'}</h2><p className="muted">{duration(recording.duration_seconds)} · {(recording.byte_size / 1_000_000).toFixed(2)} MB · {recording.mime_type}</p>
@@ -231,9 +280,16 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
     {error && <ErrorNotice error={error} />}
     {!recording && <button className="secondary" onClick={onMissing}>Return to library</button>}
     {deleting ? <div className="notice">Deletion was accepted. Cleanup is pending on the laptop.<button className="quiet" onClick={onMissing}>Return to library</button></div> : <>
-      {job && <div className={`notice ${job.status === 'blocked' || job.status === 'partial' ? 'warning' : ''}`} role="status"><strong>{stageCopy[job.status]}</strong>{job.error && <p>{job.error.message}</p>}{active && <p className="caption">You can leave this view. Processing continues on the laptop.</p>}</div>}
+      {status && <div className={`notice processing-status ${!starting && (job?.status === 'blocked' || job?.status === 'partial') ? 'warning' : ''}`}>
+        {showOrb && <ParticleOrb ready={reveal} />}
+        <div role="status">
+          <strong>{status}</strong>
+          {!starting && job?.error && <p>{job.error.message}</p>}
+          {active && <p className="caption">You can leave this view. Processing continues on the laptop.</p>}
+        </div>
+      </div>}
       {recording && canProcess && <div className="process-panel"><h3>{hasPending ? 'Confirm your pending action' : job ? 'Continue processing' : 'Ready to make study materials?'}</h3><p>Your audio goes to ElevenLabs for transcription. Transcript content goes to the configured AI provider. Results are shared with all authorized demo devices and use the shared demo allowance.</p><label className="check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />I agree to this processing.</label><button disabled={busy || !connected || !consent} onClick={() => void process()}>{busy ? 'Sending…' : hasPending ? 'Retry same processing request' : job ? 'Retry processing' : 'Process lecture'}</button></div>}
-      {pack && <Study key={pack.id} api={api} pack={pack} />}
+      {pack && (!result || reveal) && <Study key={pack.id} api={api} pack={pack} />}
       {recording && <div className="cleanup"><p className="caption">Deleting uploaded data affects every demo device. Your original computer file stays on your computer.</p><button className="danger" disabled={busy || !connected} onClick={() => void deleteRecording()}>Delete uploaded lecture</button></div>}
     </>}
   </section>;

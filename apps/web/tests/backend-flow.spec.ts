@@ -83,6 +83,7 @@ test('recorded WebM uploads with CSRF; real API budget and correct/incorrect/una
   await expect(page.getByRole('heading', { name: 'Contract recording', exact: true })).toBeVisible();
   await page.getByLabel('I agree to this processing.').check();
   await page.getByRole('button', { name: 'Process lecture', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Lecture details ready', { timeout: 12_000 });
   await expect(page.getByRole('button', { name: 'Quiz', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByLabel('Chlorophyll', { exact: true }).check();
