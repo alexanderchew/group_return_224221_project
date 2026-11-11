@@ -1,0 +1,19 @@
+{
+  "scope": "isolated_backend_adapter_full_transcript_check_on_candidate_test_labels",
+  "model_version": "subject-char-cnn-0a27510f-28768e86-seed42",
+  "holdout_lectures": 25,
+  "holdout_source_families": 8,
+  "results": {
+    "correct": 25
+  },
+  "by_subject": {
+    "Mathematics": {
+      "correct": 15
+    },
+    "science": {
+      "correct": 10
+    }
+  },
+  "production_eligible": false,
+  "paid_api_calls": 0
+}

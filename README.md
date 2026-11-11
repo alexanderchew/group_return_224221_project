@@ -1,8 +1,8 @@
 # Lecture Companion
 
-Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials. Two independent TensorFlow/Keras neural networks for subject and language recognition are implemented in [`training/`](training/); training on reviewed real lectures is pending the dataset.
+Working descriptor for an IGCSE study app: record or import a lesson, save its transcript, produce lecture-grounded notes and an overview, then answer questions with source-linked feedback. ElevenLabs handles transcription; an external LLM initially generates study materials. Two independent TensorFlow/Keras neural networks for subject and language recognition are implemented in [`training/`](training/).
 
-**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. The Android interface launches in native Expo Go and Record/Library navigation is verified in an emulator. Native API integration, standalone builds, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed. **The subject and language CNNs and Colab/Jupyter notebook are created and pass synthetic training checks.** Real-lecture accuracy and live model integration remain pending; see [training status and instructions](#train-the-subject-and-language-networks).
+**Status: recording-first web and native Expo frontend source, plus Alex’s initial backend, are implemented.** The web adapter now matches the backend's CSRF, budget and quiz-result fields. A browser recording→upload→processing→scoring/deletion flow is verified against the real API/worker with isolated data and labeled provider doubles. The Android interface launches in native Expo Go and Record/Library navigation is verified in an emulator. Native API integration, standalone builds, physical-phone tests and long-session/endurance tests remain pending. Alex separately verified one short real-provider run; no new paid frontend/provider run is claimed. **The Mathematics and science subject CNN has been tested in an offline browser pilot.** See [the trained model and setup instructions](#run-the-mathematics-and-science-model).
 
 ## Screenshots
 
@@ -107,7 +107,7 @@ GitHub currently requires zero approving reviews and has no required CI status c
 
 Backend versions are pinned in `pyproject.toml` and `uv.lock`; frontend versions are pinned in `package-lock.json`. The local data directory is `var/demo/`, including audio, SQLite state and content-free spending records. Local data, provider keys, app-access provisioning, dependency directories and generated builds are excluded from Git. Restarting or deleting study data does not reset spending.
 
-The active verified backend intake limit is **60 minutes and 128 MiB**. Ten hours/2 GB remain full targets and are shown separately in `/config` as `prototype_limited`. WAV, MP3, M4A/AAC and WebM/Opus are supported; browser WebM without duration metadata is measured by a bounded local decode. There is no verified ten-hour/device endurance claim. The CNN implementation and training environment are separate from the API runtime. A real-lecture-trained subject bundle is not installed in the live worker; missing custom inference remains explicitly unavailable.
+The active verified backend intake limit is **60 minutes and 128 MiB**. Ten hours/2 GB remain full targets and are shown separately in `/config` as `prototype_limited`. WAV, MP3, M4A/AAC and WebM/Opus are supported; browser WebM without duration metadata is measured by a bounded local decode. There is no verified ten-hour/device endurance claim. The subject model can be loaded by an API instance with the pinned TensorFlow/Keras runtime and an explicit `LECTURE_MODEL_DIR`. The standard launcher defaults to an unconfigured subject model.
 
 Backend checks and contract export:
 
@@ -128,7 +128,7 @@ The generated [OpenAPI contract](fixtures/contracts/openapi.json) comes from the
 | Subject | Character vocabulary → Embedding → Conv1D → GlobalMaxPooling → Dense → Dropout | Softmax; one subject per instructional section |
 | Language | Separate character vocabulary and CNN with its own weights | Independent sigmoid labels; English/Malay/Chinese can co-occur |
 
-**Real lecture training is pending the dataset.** The initial run trained both networks only on explicitly synthetic software-check examples. Those results verify the pipeline; they do not establish lecture recognition accuracy and cannot be loaded as the production subject classifier. No provider API was called or model deployed.
+The initial synthetic runs verified training and export. The Mathematics and science subject bundle below was subsequently trained on real lecture transcripts with candidate labels. Independent label review remains pending.
 
 For a new local checkout, create the isolated training environment once (Python 3.13):
 
@@ -141,13 +141,13 @@ mkdir -p var/training-data/transcripts
 
 For local notebook use, select `var/training-env/bin/python` as the kernel interpreter in your Jupyter editor. In a fresh Colab runtime, follow the notebook's repository setup and dependency-install cell first.
 
-On Alex's current checkout that environment and the two header-only CSV templates already exist. Put original-language UTF-8 `.txt` transcripts in `var/training-data/transcripts/`. To create fresh unlabelled annotation drafts, run:
+Put original-language UTF-8 `.txt` transcripts in `var/training-data/transcripts/`. To create fresh unlabelled annotation drafts, run:
 
 ```sh
 var/training-env/bin/python -m training.train prepare var/training-data/transcripts var/training-data/drafts
 ```
 
-Review the draft rows yourself: `source_index.json` maps each lecture ID back to its original file for context. Subject sections need `role` and `subject`; language sections need independent `English`, `Malay`, `Chinese` 0/1 labels. Assign `train`, `val`, `test` before training; all derivatives of one source share a `source_family_id` and split. Only instructional sections train the initial subject model. Draft splitting does not determine teaching context or labels. The notebook explains the columns and limitations. If you prepare and label drafts in `var/training-data/drafts/`, set its `DATA_DIR = ROOT / 'var/training-data/drafts'` before running; keep `RUN_MODE='real'`. Raw data, models and executed private notebooks belong under ignored `var/`, not Git.
+Review the draft rows yourself: `source_index.json` maps each lecture ID back to its original file for context. Subject sections need `role` and `subject`; language sections need independent `English`, `Malay`, `Chinese` 0/1 labels. Assign `train`, `val`, `test` before training; all derivatives of one source share a `source_family_id` and split. Only instructional sections train the initial subject model. Draft splitting does not determine teaching context or labels. The notebook explains the columns and limitations. If you prepare and label drafts in `var/training-data/drafts/`, set its `DATA_DIR = ROOT / 'var/training-data/drafts'` before running; keep `RUN_MODE='real'`. Keep raw data, unpublished model exports and executed private notebooks under ignored `var/`.
 
 Once reviewed CSVs are ready (choose fresh output directories for every run):
 
@@ -163,6 +163,27 @@ Each export includes `model.keras` with its trained vectorizer, a versioned mani
 **Verification:** 15 automated training tests pass, and a private synthetic-mode notebook execution trains both default networks, exports them and verifies reload predictions. These are software checks, not real-lecture validation.
 
 Run `var/training-env/bin/python -m pytest training/tests -q -o pythonpath=.` for the training tests. To repeat the **synthetic-only** end-to-end check, use fresh paths with `var/training-env/bin/python -m training.smoke --data-dir var/SYNTHETIC-check-002 --output var/models/SYNTHETIC-check-002 --epochs 8`. These artifacts are marked ineligible for production. Neither command calls ElevenLabs/OpenAI or changes the live demo's data/budget. Use the notebook's `RUN_MODE='real'` for actual reviewed lectures; it blocks on empty/unreviewed CSVs instead of inventing labels.
+
+### Run the Mathematics and science model
+
+The [published bundle](models/subject-mathematics-science/) contains the Keras weights and character vectorizer, the versioned manifest, and aggregate test and serving results. The model scored **157/159 sections** and **25/25 full transcripts** on candidate labels from eight held-out source families. It is marked `production_eligible: false` pending independent review. The output labels are `Mathematics` and `science`.
+
+After setting up the training environment above, classify a UTF-8 transcript locally:
+
+```sh
+var/training-env/bin/python -m training.predict models/subject-mathematics-science path/to/lecture.txt
+```
+
+For an opt-in API instance, complete `uv sync --frozen` first. This command uses the pinned TensorFlow/Keras packages from the training environment and starts a separate demo on port 8001 with both paid providers disabled:
+
+```sh
+training_packages="$(var/training-env/bin/python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+env -u ELEVENLABS_API_KEY -u OPENAI_API_KEY \
+  PYTHONPATH="$training_packages" LECTURE_MODEL_DIR="$PWD/models/subject-mathematics-science" \
+  ./scripts/start_demo.command --no-prompt --port 8001 --data-dir var/subject-model-pilot
+```
+
+In the offline pilot, the browser displayed both accepted predictions as **Student model** and showed feedback after backend scoring. The Mathematics quiz used locally written questions and the science quiz replayed saved output. The standalone command above works directly on text. Processing a fresh audio upload through the API still requires the provider workflow described above. [Pilot evidence and limits](docs/specs/ALEX_BACKEND_SPEC.md#mathematics-and-science-pilot--10-november-2026)
 
 ## First real-provider test
 
