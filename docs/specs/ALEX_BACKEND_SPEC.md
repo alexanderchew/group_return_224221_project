@@ -473,3 +473,7 @@ Alex authorized fixing PR #3's four integration findings, merging it and deployi
 Two backend regressions encode durationless WebM and check accepted duration/original-byte preservation plus over-limit rejection with no provider calls. The frontend contract suite and browser/API test use private temporary storage and labeled provider doubles with outbound HTTP disabled; the production ledger/database is never used for them. Ben's section 13 owns the web verification details. The canonical API schema, provider key handling, stable budget and historical packs/attempts are unchanged. Local deployment uses the real backend with paid providers disabled.
 
 Verification for this change: **57 backend tests pass**, plus five actual-backend frontend contract tests, 12 frontend unit tests and 14 Chromium browser tests. Both app type checks, the web production build and Ruff pass. All 37 archived source hashes remain unchanged. The real demo ledger remains US$0.071294 with no new paid work.
+
+### Chrome capture regression and replay verification
+
+A labeled synthetic microphone capture under `fixtures/regressions/` exercises the same decoder with actual Chrome MediaRecorder bytes. The regression checks missing duration metadata, measured intake with the original digest, and enforcement of a lower active duration limit. All 59 backend tests passed on 11 November after integration with upstream main. Ben's section 15 records the additional offline replay and key-free browser checks.

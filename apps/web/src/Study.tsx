@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Api, ApiError, attemptSchema, duration, message, transcriptSchema } from './api';
-import type { Attempt, Segment, StudyPack } from './api';
+import type { Attempt, QuizSubmission, Segment, StudyPack } from './api';
 import { operation, read, remove, scopeKey, write } from './storage';
 
 type Tab = 'Notes' | 'Overview' | 'Transcript' | 'Quiz';
@@ -41,6 +41,7 @@ export function Study({ api, pack }: { api: Api; pack: StudyPack }) {
   const provenance = { custom_model: 'Student model', openai_baseline: 'AI baseline', unknown: 'Unclassified' }[classification.source];
   return <div className="study">
     <div className="section-heading"><h3>Your study workspace</h3><span className="badge">{pack.output_language}</span></div>
+    {pack.provenance.some(p => /REPLAY|TEST_DOUBLE|SAVED_OUTPUT/.test(p.provider)) && <p className="notice warning">Previously generated example / offline test output · This is not a fresh provider run.</p>}
     <p className="muted">{classification.label ?? 'Subject unavailable'} · {provenance}{classification.source === 'custom_model' && classification.score !== null ? ` · Model score ${classification.score.toFixed(2)}` : ''}</p>
     {classification.custom_status !== 'accepted' && <p className="caption">Student model: {classification.custom_status.replaceAll('_', ' ')}. {classification.fallback_reason?.replaceAll('_', ' ')}</p>}
     {pack.subject_override && <p className="notice">Manually selected subject: {pack.subject_override.subject}</p>}
@@ -87,7 +88,7 @@ function Quiz({ api, pack, refs }: { api: Api; pack: StudyPack; refs: (ids: stri
     if (guard.current || pack.freshness !== 'current' || pack.quiz_status !== 'available' || unanswered > 0 && !unansweredConfirmed && !pending) return;
     guard.current = true; setBusy(true); setError('');
     try {
-      const body = { study_pack_id: pack.id, answers: pack.questions.map(q => ({ question_id: q.id, option_id: answers[q.id] ?? null })) };
+      const body: QuizSubmission = { study_pack_id: pack.id, answers: pack.questions.map(q => ({ question_id: q.id, option_id: answers[q.id] ?? null })) };
       const request = operation(pendingKey, body); setPending(true);
       const result = await api.json(`/recordings/${encodeURIComponent(pack.recording_id)}/quiz-attempts`, request.body, request.key, attemptSchema);
       if (result.study_pack_id !== pack.id) throw new Error('The returned feedback belongs to a different study version.');

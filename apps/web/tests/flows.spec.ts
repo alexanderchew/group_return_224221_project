@@ -9,6 +9,7 @@ async function connect(page: Page) {
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
 }
 async function api(page: Page, initial = true, customPack: unknown = pack) {
+  await page.context().addCookies([{ name: 'lecture_csrf', value: 'browser-csrf-token', url: 'http://127.0.0.1:4173' }]);
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname.replace('/api/v1', '');
     let body: unknown;
@@ -36,11 +37,12 @@ test('web upload stays separate from processing and retains its key/file across 
   const keys: string[] = [];
   await page.route('**/api/v1/recordings', async route => {
     if (route.request().method() !== 'POST') return route.fallback();
+    expect(route.request().headers()['x-csrf-token']).toBe('browser-csrf-token');
     keys.push(route.request().headers()['idempotency-key']); uploads++;
     if (uploads === 1) return route.abort('failed');
     return route.fulfill({ status: 201, json: recording });
   });
-  await page.route('**/api/v1/recordings/*/jobs', async route => { jobs++; return route.fulfill({ status: 202, json: job }); });
+  await page.route('**/api/v1/recordings/*/jobs', async route => { expect(route.request().headers()['x-csrf-token']).toBe('browser-csrf-token'); jobs++; return route.fulfill({ status: 202, json: job }); });
   await connect(page);
   await page.getByLabel('Browse audio').setInputFiles({ name: 'lesson.wav', mimeType: 'audio/wav', buffer: Buffer.from('synthetic-media-not-a-codec-test') });
   await page.getByLabel('I can share this recording').check();
@@ -73,12 +75,13 @@ test('quiz submission survives a lost response, locks answers, restores feedback
   await api(page); let submissions = 0;
   const bodies: unknown[] = [], keys: string[] = [];
   await page.route('**/api/v1/recordings/*/quiz-attempts', async route => {
+    expect(route.request().headers()['x-csrf-token']).toBe('browser-csrf-token');
     submissions++; bodies.push(route.request().postDataJSON()); keys.push(route.request().headers()['idempotency-key']);
     if (submissions === 1) return route.abort('failed');
     return route.fulfill({ status: 201, json: attempt });
   });
   await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();
-  await expect(page.getByText('Demo allowance: $16.50 available of $20.00')).toBeVisible();
+  await expect(page.getByText('Demo allowance: $16.250000 available of $20.000000')).toBeVisible();
   await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByLabel('They vibrate around fixed positions.').check();
   await page.getByRole('button', { name: 'Submit answers' }).click();
@@ -87,9 +90,12 @@ test('quiz submission survives a lost response, locks answers, restores feedback
   await page.reload(); await page.getByRole('button', { name: 'Study library', exact: true }).click(); await page.getByRole('button', { name: 'Quiz', exact: true }).click();
   await page.getByRole('button', { name: 'Retry same submission' }).click();
   await expect(page.getByRole('heading', { name: '1 of 1 correct' })).toBeVisible();
-  await expect(page.getByText('Correct', { exact: true })).toBeVisible();
+  await expect(page.locator('.feedback strong')).toHaveText('Correct');
   expect(keys[0]).toBe(keys[1]); expect(bodies[0]).toEqual(bodies[1]);
   expect(bodies[1]).toEqual({ study_pack_id: pack.id, answers: [{ question_id: 'question-1', option_id: 'a' }] });
+  await page.reload(); await page.getByRole('button', { name: 'Study library', exact: true }).click(); await page.getByRole('button', { name: 'Quiz', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '1 of 1 correct' })).toBeVisible();
+  await expect(page.locator('.feedback strong')).toHaveText('Correct');
   await page.getByRole('button', { name: 'Start a new practice attempt' }).click();
   await page.getByLabel('They stop moving completely.').check();
   await page.reload(); await page.getByRole('button', { name: 'Study library', exact: true }).click(); await page.getByRole('button', { name: 'Quiz', exact: true }).click();
@@ -116,7 +122,11 @@ test('HTTP 200 blocked jobs preserve saved audio and offer explicit recovery', a
 test('shared deletion confirms scope, clears cached drafts and keeps the computer original', async ({ page }) => {
   await api(page); await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();
   page.on('dialog', dialog => { expect(dialog.message()).toContain('EVERY demo device'); void dialog.accept(); });
-  await page.route('**/api/v1/recordings/test-recording', async route => route.request().method() === 'DELETE' ? route.fulfill({ status: 204 }) : route.fallback());
+  await page.route('**/api/v1/recordings/test-recording', async route => {
+    if (route.request().method() !== 'DELETE') return route.fallback();
+    expect(route.request().headers()['x-csrf-token']).toBe('browser-csrf-token');
+    return route.fulfill({ status: 204 });
+  });
   await page.getByRole('button', { name: 'Delete uploaded lecture' }).click();
   await expect(page.getByRole('heading', { name: 'A lesson worth revisiting.' })).toBeVisible();
   const keys = await page.evaluate(() => Object.keys(localStorage));
@@ -127,4 +137,59 @@ test('narrow layout stays readable and keyboard-accessible', async ({ page }) =>
   await expect(page.getByLabel('Browse audio')).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/library-360.png', fullPage: true });
+});
+
+test('shows the allowance from backend USD fields, including reserved and uncertain costs', async ({ page }) => {
+  await api(page, false); await connect(page);
+  await expect(page.locator('.budget')).toContainText('Demo allowance: $16.250000 available of $20.000000');
+  await expect(page.locator('.budget')).toContainText('Settled $1.000000 · Reserved $0.500000 · Uncertain $0.250000');
+});
+
+for (const selected of ['b', null]) {
+  test(`renders backend is_correct=false as ${selected === null ? 'unanswered' : 'incorrect'}`, async ({ page }) => {
+    await api(page);
+    await page.route('**/api/v1/recordings/*/quiz-attempts', route => route.fulfill({ status: 201, json: {
+      ...attempt, correct_count: 0, percentage: 0, unanswered_count: selected === null ? 1 : 0,
+      results: [{ ...attempt.results[0], selected_option_id: selected, is_correct: false }],
+    } }));
+    await connect(page); await page.getByRole('button', { name: new RegExp(recording.title) }).click();
+    await page.getByRole('button', { name: 'Quiz', exact: true }).click();
+    if (selected) await page.getByLabel('They move freely throughout the container.').check();
+    else await page.getByLabel('Submit with 1 unanswered. Unanswered questions score zero.').check();
+    await page.getByRole('button', { name: 'Submit answers' }).click();
+    await expect(page.getByRole('heading', { name: '0 of 1 correct' })).toBeVisible();
+    await expect(page.locator('.feedback strong')).toHaveText(selected === null ? 'Unanswered' : 'Incorrect');
+  });
+}
+
+test('uploads its own freshly recorded WebM with codec parameters and the operator CSRF cookie', async ({ page }) => {
+  await api(page, false);
+  const uploaded = { ...recording, title: 'Recorder upload regression', mime_type: 'audio/webm' };
+  let uploads = 0;
+  await page.route('**/api/v1/recordings/test-recording', route => route.fulfill({ json: uploaded }));
+  await page.route('**/api/v1/recordings', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const headers = route.request().headers();
+    if (headers['x-csrf-token'] !== 'browser-csrf-token' || !headers.cookie?.includes('lecture_csrf=browser-csrf-token')) {
+      return route.fulfill({ status: 403, json: { error: { code: 'csrf_required', message: 'A matching CSRF token is required.', retryable: false, stage: null } } });
+    }
+    expect(headers['content-type']).toContain('multipart/form-data; boundary=');
+    expect(route.request().postDataBuffer()?.toString('latin1')).toContain('Content-Type: audio/webm;codecs=opus');
+    uploads++;
+    return route.fulfill({ status: 201, json: uploaded });
+  });
+  await connect(page);
+  await page.getByRole('button', { name: 'Record', exact: true }).click();
+  await page.getByLabel('Recording title').fill('Recorder upload regression');
+  await page.getByRole('button', { name: 'Start recording', exact: true }).click();
+  await expect.poll(async () => page.locator('.capture-clock').getAttribute('aria-label')).not.toBe('0 seconds recorded');
+  await page.getByRole('button', { name: 'Stop & save' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved on this device' })).toBeVisible();
+  await page.getByRole('button', { name: /Recorder upload regression.*Local/ }).click();
+  await page.getByRole('button', { name: 'Use for study ↗' }).click();
+  await expect(page.getByText('audio/webm;codecs=opus', { exact: false }).first()).toBeVisible();
+  await page.getByLabel('I can share this recording').check();
+  await page.getByRole('button', { name: 'Upload to shared library' }).click();
+  await expect(page.getByRole('heading', { name: 'Recorder upload regression', exact: true })).toBeVisible();
+  expect(uploads).toBe(1);
 });

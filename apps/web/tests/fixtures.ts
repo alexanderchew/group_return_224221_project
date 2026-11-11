@@ -1,6 +1,7 @@
 // Synthetic contract test responses ONLY. Never imported into the shipped app.
 export const config = { max_audio_bytes: 134217728, max_duration_seconds: 3600, target_max_audio_bytes: 2000000000, target_max_duration_seconds: 36000, capacity_status: 'prototype_limited', accepted_mime_types: ['audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/webm'], workspace_mode: 'shared_demo' };
-export const budget = { currency: 'USD', ceiling_usd: '20.00', settled_usd: '1.00', reserved_usd: '0.50', uncertain_usd: '0.00', contingency_usd: '2.00', available_usd: '16.50' };
+// Same wire fields/decimal precision as Store.budget(); no production data or paid calls.
+export const budget = { currency: 'USD', ceiling_usd: '20.000000', settled_usd: '1.000000', reserved_usd: '0.500000', uncertain_usd: '0.250000', contingency_usd: '2.000000', available_usd: '16.250000', warning: false, accounting_basis: 'conservative_estimates_not_vendor_invoice' };
 export const recording = { id: 'test-recording', title: 'Particles and changes of state', source: 'web', recorded_at: null, created_at: '2026-11-04T10:00:00Z', duration_seconds: 125, byte_size: 40000, mime_type: 'audio/wav', latest_job_id: null, current_transcript_revision_id: null, revision: 1 };
 export const segment = { id: 'segment-1', text: 'The particles in a solid vibrate around fixed positions. 固体的粒子在固定位置振动。', start_seconds: 12, end_seconds: 20 };
 export const question = { id: 'question-1', prompt: 'How do particles move in a solid?', options: [{ id: 'a', text: 'They vibrate around fixed positions.' }, { id: 'b', text: 'They move freely throughout the container.' }, { id: 'c', text: 'They stop moving completely.' }, { id: 'd', text: 'They only move at the surface.' }], evidence_segment_ids: [segment.id] };

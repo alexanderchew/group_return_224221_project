@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Api, ApiError, budgetSchema, configSchema, connectionUrl, duration, jobSchema, librarySchema, message, packSchema, recordingSchema, terminalStatuses, validateFile } from './api';
-import type { Config, Job, Recording, StudyPack } from './api';
+import type { Config, Job, JobRequest, Recording, StudyPack } from './api';
 import { clearRecording, operation, read, remove, scopeKey, uploadDraft, write } from './storage';
 import type { UploadDraft } from './storage';
 import { Study } from './Study';
@@ -15,7 +15,7 @@ const stageCopy: Record<string, string> = {
 export function ErrorNotice({ error }: { error: string }) { return <p className="notice error" role="alert">{error}</p>; }
 export function App() {
   const [base, setBase] = useState(() => read<string>('lecture-companion:host', ''));
-  const [address, setAddress] = useState(base);
+  const [address, setAddress] = useState(base || window.location.origin);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<'record' | 'study'>('record');
@@ -29,7 +29,7 @@ export function App() {
       event.preventDefault();
       try { const next = connectionUrl(address); write('lecture-companion:host', next); setBase(next); setEditing(false); setView('study'); setError(''); } catch (e) { setError(message(e)); }
     }}><label htmlFor="address">Laptop service address</label><div className="row"><input id="address" type="url" placeholder="https://laptop.example" value={address} required onChange={e => setAddress(e.target.value)} /><button>Connect</button></div>
-      <p className="muted">Use the address provided by Alex. Demo access is set up by the operator in this browser.</p>{error && <ErrorNotice error={error} />}</form></section>}
+      <p className="muted">Use the address provided by Alex. For local development, keep this page’s address to use the laptop connection.</p><p><a href={`${base || window.location.origin}/operator/connect`} target="_blank" rel="noreferrer">Set up browser access</a> using the demo connection code from the laptop terminal, then return here and connect. This code is separate from provider keys.</p>{error && <ErrorNotice error={error} />}</form></section>}
     {view === 'record' ? <Recorder onUseFile={file => { setInitialFile(file); setView('study'); if (!base) setEditing(true); }} /> : base ? <Workspace key={base} base={base} initialFile={initialFile} clearInitialFile={() => setInitialFile(null)} /> : <main id="main" className="welcome"><span className="eyebrow">YOUR STUDY SPACE</span><h1>Your lesson, made clearer.</h1><p>Connect to Alex’s laptop to upload a lecture, revisit its transcript, and study with source-linked notes and questions.</p><button onClick={() => setEditing(true)}>Connect laptop</button><div className="notice">Waiting for the laptop service. No audio has been uploaded or processed.</div><p className="muted">The uploaded demo library is shared with every authorized device. Keep a copy of your original audio.</p></main>}
     <footer>Made for the moments worth remembering.<span>Lecture Companion · Local recording, shared study</span></footer>
   </>;
@@ -205,7 +205,7 @@ function Detail({ api, recordingId, connected, onMissing, onChange }: { api: Api
     if (pack && !hasPending && !job?.error && job?.status !== 'partial') return;
     guard.current = true; setBusy(true); setError('');
     try {
-      const body = job && ['failed', 'blocked', 'partial', 'canceled'].includes(job.status) ? { retry_of_job_id: job.id } : {};
+      const body: JobRequest = job && ['failed', 'blocked', 'partial'].includes(job.status) ? { retry_of_job_id: job.id } : {};
       const pending = operation(pendingScope, body); setHasPending(true);
       const next = await api.json(`${path}/jobs`, pending.body, pending.key, jobSchema);
       if (next.recording_id !== recordingId) throw new Error('Processing details do not match this lecture.');

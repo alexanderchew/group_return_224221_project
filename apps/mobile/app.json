@@ -14,7 +14,7 @@
       }],
       "expo-sqlite"
     ],
-    "ios": { "supportsTablet": true },
-    "android": { "permissions": ["RECORD_AUDIO"] }
+    "ios": { "supportsTablet": true, "bundleIdentifier": "dev.lecturecompanion.app" },
+    "android": { "package": "dev.lecturecompanion.app", "permissions": ["RECORD_AUDIO"] }
   }
 }

@@ -10,9 +10,11 @@
     "test": "vitest run src",
     "test:contract": "vitest run tests/backend-contract.test.ts",
     "test:browser": "playwright test",
+    "test:integration": "playwright test --config playwright.integration.config.ts",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@lecture-companion/contracts": "0.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.7"

@@ -5,9 +5,11 @@ dist/
 !.env.example
 playwright-report/
 test-results/
+integration-results/
 .DS_Store
 .expo/
-apps/mobile/ios/
+apps/mobile/ios/*
+!apps/mobile/ios/Podfile.lock
 apps/mobile/android/
 .venv/
 var/

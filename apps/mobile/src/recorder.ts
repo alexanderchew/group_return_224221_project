@@ -5,7 +5,7 @@ import * as SQLite from 'expo-sqlite';
 import { randomUUID } from 'expo-crypto';
 import { Platform } from 'react-native';
 
-export type Lesson = { id: string; title: string; uri: string; createdAt: string; durationSeconds: number | null; bytes: number; state: 'capturing' | 'saved' | 'interrupted'; available?: boolean };
+export type Lesson = { id: string; title: string; uri: string; createdAt: string; recordedAt?: string; durationSeconds: number | null; bytes: number; state: 'capturing' | 'saved' | 'interrupted'; available?: boolean };
 type Phase = 'idle' | 'permission' | 'recording' | 'paused' | 'saving' | 'saved' | 'error';
 type State = { phase: Phase; seconds: number; levels: number[]; error: string; notice: string; lesson: Lesson | null; lessons: Lesson[] };
 let dbPromise: Promise<SQLite.SQLiteDatabase> | undefined;
@@ -69,7 +69,8 @@ class NativeRecorder {
       this.recorder = recorder;
       await recorder.prepareToRecordAsync(options);
       if (!recorder.uri) throw new Error('The microphone could not create a local audio file.');
-      const lesson: Lesson = { id, title: title.trim() || 'Untitled lesson', uri: recorder.uri, createdAt: new Date().toISOString(), durationSeconds: 0, bytes: 0, state: 'capturing' };
+      const recordedAt = new Date().toISOString();
+      const lesson: Lesson = { id, title: title.trim() || 'Untitled lesson', uri: recorder.uri, createdAt: recordedAt, recordedAt, durationSeconds: 0, bytes: 0, state: 'capturing' };
       await save(lesson); // Document URI and metadata exist before capture starts.
       this.interrupted = false; this.checkpoint = 0; this.finishing = false; this.persistence = Promise.resolve();
       recorder.addListener('recordingStatusUpdate', status => {
