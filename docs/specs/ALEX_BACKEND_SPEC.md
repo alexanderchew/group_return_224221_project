@@ -1,6 +1,6 @@
 # Alex — Backend, Processing, and AI Integration Specification
 
-Version 0.6 · 2026-11-05 · Project name undecided; “Lecture Companion” is a working descriptor.
+Version 0.7 · 2026-11-06 · Project name undecided; “Lecture Companion” is a working descriptor.
 
 **Owner:** Alex, who is the user in this chat. **Status:** initial backend implemented under the user’s explicit local-backend instruction. Source, a pinned environment, terminal launcher and automated backend checks exist; one short real-provider test passed (section 15), followed by offline quality fixes (section 16). Trained-model quality, mobile clients and full endurance remain separate evidence. Section 14 records the current executable subset and limitations. Earlier spec/publication history does not establish a complete product gate.
 
@@ -433,3 +433,13 @@ The subsequent explicit “merge and deploy” instruction authorizes committing
 Release verification uses all 55 offline tests and Ruff, staged whitespace/content checks, archive hashes, pinned dependency manifests, repository permissions and current remote/main ancestry. Exclude `.venv`, local audio/database/budget/access provisioning, `.env`, caches and unrelated `.DS_Store`. Preserve local data and the persistent US$0.071294 ledger; back up the database before restart and verify its records/accounting afterward. Confirm the remote commit matches local main after the normal push.
 
 Deploy by first ensuring no active job, then gracefully stopping the old launcher and starting `scripts/start_demo.command` from the merged source with the same local data directory. Because provider keys exist only in the old process, Alex supplies them privately in the new Terminal prompt; no process-memory extraction or plaintext key backup is used. Startup and health/config/budget/library checks make no paid request. Verify localhost access and the published OpenAPI after startup. Any incomplete key-entry step must be reported as pending, not claimed as a ready keyed service.
+
+## 18. Approved browser WebM intake fix — 6 November 2026
+
+During Ben's real-HTTP frontend integration check, actual Chrome MediaRecorder WebM/Opus was playable but rejected as `media_corrupt`: the streamed container has no duration header, and intake previously required a duration from ffprobe metadata. Ben explicitly approved the narrow backend correction after the frontend/backend ownership boundary was explained.
+
+`media.py` now measures headerless WebM audio with FFmpeg decoding to a null sink, using strict decode errors, file/pipe-only protocols, a 180-second wall timeout and the active duration ceiling plus one second to detect over-limit audio. The decoded waveform and packet list are not accumulated in memory; original upload bytes remain unchanged. Existing format/size/duration validation, API schema, job/provider behavior, accounting and historical recordings/packs/attempts are unchanged. This is an intake compatibility fix, not broader codec/endurance acceptance.
+
+The labeled fixture `fixtures/regressions/chrome-mediarecorder-headerless.webm` is an actual short Chrome synthetic-microphone capture, not personal audio or provider output. Two offline decoder regressions verify its missing metadata duration, successful measured intake/original digest retention, and rejection under a smaller active duration limit. All **57 backend tests pass**, with external HTTP blocked, and Ruff passes. Ben's two real-HTTP integration cases also verify actual WebM upload and safe missing-provider blocking plus the separate saved-output scoring walkthrough; their exact evidence/limits remain in Ben's section 14.
+
+No live provider was invoked, no original spending ledger or historical artifact was accessed/reset, and no production service was restarted. HTTP tests use independent disposable temporary stores with no keys and explicitly labeled replay. The previous US$0.071294 accounting evidence remains as recorded; no new paid-run or full device/provider gate is claimed.

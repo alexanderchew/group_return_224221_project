@@ -18,6 +18,27 @@ def file_digest(path: Path) -> str:
     return value.hexdigest()
 
 
+def webm_duration(path: Path, settings: Settings) -> float:
+    """Measure streamed WebM audio when MediaRecorder omits container duration.
+
+    Decode to a null sink, with a duration ceiling and wall timeout. Progress is
+    small text; neither the complete decoded audio nor packet list enters RAM.
+    Original uploaded bytes stay unchanged.
+    """
+    if not shutil.which("ffmpeg"):
+        raise Problem("feature_unavailable", "FFmpeg must be installed to verify recorded WebM audio.", 503)
+    result = subprocess.run(
+        ["ffmpeg", "-v", "error", "-xerror", "-nostdin", "-protocol_whitelist", "file,pipe",
+         "-i", str(path), "-map", "0:a:0", "-t", str(settings.max_duration_seconds + 1),
+         "-vn", "-ac", "1", "-ar", "16000", "-progress", "pipe:1", "-stats_period", "1",
+         "-nostats", "-f", "null", "-"],
+        capture_output=True, text=True, timeout=180, check=True,
+    )
+    times = [int(line.partition("=")[2]) for line in result.stdout.splitlines()
+             if line.startswith("out_time_us=") and line.partition("=")[2] != "N/A"]
+    return max(times, default=0) / 1_000_000
+
+
 def probe(path: Path, settings: Settings) -> dict:
     if not shutil.which("ffprobe"):
         raise Problem("feature_unavailable", "FFmpeg/ffprobe must be installed on the server.", 503)
@@ -31,10 +52,13 @@ def probe(path: Path, settings: Settings) -> dict:
         streams = [s for s in info["streams"] if s.get("codec_type") == "audio"]
         if not streams or any(s.get("codec_type") == "video" for s in info["streams"]):
             raise ValueError("Audio-only input required")
-        duration = float(info["format"].get("duration", streams[0].get("duration", 0)))
+        fmt = info["format"]["format_name"]
+        declared_duration = info["format"].get("duration", streams[0].get("duration"))
+        duration = (webm_duration(path, settings)
+                    if declared_duration is None and ("webm" in fmt or "matroska" in fmt)
+                    else float(declared_duration or 0))
         if not math.isfinite(duration) or duration <= 0:
             raise ValueError("Invalid duration")
-        fmt = info["format"]["format_name"]
         if "wav" in fmt:
             mime = "audio/wav"
         elif "mp3" in fmt:

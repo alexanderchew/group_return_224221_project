@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import type { components } from '@lecture-companion/contracts';
+import { jobStatuses } from '../../../packages/contracts/job-statuses';
+export { jobStatuses };
+export type JobRequest = components['schemas']['JobRequest'];
+export type QuizSubmission = components['schemas']['QuizSubmission'];
 
 // Client consumption guards for Alex's backend, not an independent API contract.
 // OpenAPI lives in fixtures/contracts; budget/quiz dict responses and cookie access
@@ -6,7 +11,6 @@ import { z } from 'zod';
 const id = z.string().min(1);
 const seconds = z.number().finite().nonnegative();
 const money = z.string().regex(/^\d+(\.\d+)?$/);
-export const jobStatuses = ['queued', 'preparing_audio', 'transcribing', 'analysing', 'generating', 'validating', 'ready', 'partial', 'blocked', 'failed', 'canceled'] as const;
 export const terminalStatuses = new Set<string>(['ready', 'partial', 'blocked', 'failed', 'canceled']);
 const safeError = z.object({ code: id, message: z.string(), retryable: z.boolean(), stage: z.string().nullable() });
 export const configSchema = z.object({
@@ -22,14 +26,14 @@ export const budgetSchema = z.object({
 export const recordingSchema = z.object({
   id, title: z.string(), source: z.enum(['mobile', 'web']), recorded_at: z.string().nullable(),
   created_at: z.string(), duration_seconds: seconds, byte_size: z.number().int().nonnegative(), mime_type: id,
-  latest_job_id: id.nullable(), current_transcript_revision_id: id.nullable(), revision: z.union([z.string(), z.number()]),
-});
+  latest_job_id: id.nullable(), current_transcript_revision_id: id.nullable(), revision: z.number().int(),
+}) satisfies z.ZodType<Pick<components['schemas']['RecordingOut'], 'id' | 'title' | 'source' | 'recorded_at' | 'created_at' | 'duration_seconds' | 'byte_size' | 'mime_type' | 'latest_job_id' | 'current_transcript_revision_id' | 'revision'>>;
 export const librarySchema = z.object({ items: z.array(recordingSchema), next_cursor: z.string().nullable() });
 export const jobSchema = z.object({
   id, recording_id: id, status: z.enum(jobStatuses),
   stage: z.enum(['validate_media', 'prepare_audio', 'transcribe', 'classify_subject', 'generate_notes', 'generate_overview', 'generate_quiz', 'validate_outputs']).nullable(),
   updated_at: z.string(), study_pack_id: id.nullable(), error: safeError.nullable(),
-});
+}) satisfies z.ZodType<Pick<components['schemas']['JobOut'], 'id' | 'recording_id' | 'status' | 'stage' | 'updated_at' | 'study_pack_id' | 'error'>>;
 export const segmentSchema = z.object({ id, text: z.string(), start_seconds: seconds.nullable(), end_seconds: seconds.nullable() })
   .refine(s => (s.start_seconds === null && s.end_seconds === null) || (s.start_seconds !== null && s.end_seconds !== null && s.start_seconds <= s.end_seconds));
 const evidence = z.array(id);
@@ -50,6 +54,7 @@ export const packSchema = z.object({
   questions: z.array(z.object({ id, prompt: z.string(), options: z.array(z.object({ id, text: z.string() })).length(4).refine(options => new Set(options.map(o => o.id)).size === options.length), evidence_segment_ids: evidence })).refine(questions => new Set(questions.map(q => q.id)).size === questions.length),
   artifact_statuses: z.record(z.string(), z.enum(['ready', 'failed', 'unavailable', 'insufficient_evidence'])),
   freshness: z.enum(['current', 'outdated']), warnings: z.array(z.string()),
+  provenance: z.array(z.object({ provider: z.string(), model: z.string().optional() }).passthrough()).default([]),
 }).refine(p => p.quiz_status === 'available' ? p.questions.length > 0 : p.questions.length === 0);
 export const attemptSchema = z.object({
   id, study_pack_id: id, correct_count: z.number().int().nonnegative(), total_count: z.number().int().positive(),

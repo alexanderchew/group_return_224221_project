@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Api, ApiError, attemptSchema, budgetSchema, configSchema, connectionUrl, duration, jobSchema, packSchema, validateFile } from './api';
+import { Api, ApiError, attemptSchema, budgetSchema, configSchema, connectionUrl, duration, jobSchema, packSchema, recordingSchema, validateFile } from './api';
+import backendRecording from '../../../fixtures/contracts/recording.json';
+import backendJob from '../../../fixtures/contracts/job-ready.json';
+import backendPack from '../../../fixtures/contracts/study-pack.json';
 import { operation, StorageFailure } from './storage';
 import { attempt, budget, config, pack, question } from '../tests/fixtures';
 
@@ -9,6 +12,12 @@ beforeEach(() => vi.stubGlobal('document', { cookie: 'csrftoken=obsolete; unrela
 afterEach(() => { store.clear(); vi.restoreAllMocks(); });
 
 describe('safe API boundary', () => {
+  it('consumes the backend-exported response fixtures and retains their test provenance', () => {
+    expect(recordingSchema.safeParse(backendRecording.response).success).toBe(true);
+    expect(jobSchema.safeParse(backendJob.response).success).toBe(true);
+    const parsed = packSchema.parse(backendPack.response);
+    expect(parsed.provenance[0].provider).toBe('TEST_DOUBLE');
+  });
   it('sends cookies, CSRF and the original operation key without provider credentials', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ max_audio_bytes: 10, max_duration_seconds: 60, target_max_audio_bytes: 2000000000, target_max_duration_seconds: 36000, capacity_status: 'prototype_limited', accepted_mime_types: ['audio/wav'], workspace_mode: 'shared_demo' })));
     const api = new Api('https://laptop.test', fetcher);
